@@ -1,0 +1,20 @@
+/* miniprogram/app.wxss - 全局样式 */
+page {
+  background-color: #f0f4f0;
+  font-family: -apple-system, 'PingFang SC', sans-serif;
+  font-size: 28rpx;
+  color: #333;
+  box-sizing: border-box;
+}
+
+/* 通用工具类 */
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.text-muted {
+  color: #999;
+  font-size: 24rpx;
+}

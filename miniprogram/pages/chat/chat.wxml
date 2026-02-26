@@ -1,0 +1,142 @@
+<!--miniprogram/pages/chat/chat.wxml-->
+<view class="container">
+
+  <!-- 左上角汉堡按钮 -->
+  <view class="nav-bar">
+    <view class="nav-hamburger" bindtap="onOpenDrawer">☰</view>
+  </view>
+
+  <!-- 侧边抽屉遮罩 -->
+  <view wx:if="{{drawerOpen}}" class="drawer-mask" bindtap="onCloseDrawer"/>
+
+  <!-- 侧边抽屉面板 -->
+  <view class="drawer {{drawerOpen ? 'drawer-open' : ''}}">
+    <view class="drawer-header">
+      <text class="drawer-title">对话历史</text>
+      <view class="drawer-new-btn" bindtap="onNewSession">+ 新对话</view>
+    </view>
+    <scroll-view class="drawer-list" scroll-y>
+      <view
+        wx:for="{{sessions}}"
+        wx:key="id"
+        class="drawer-item {{item.id === currentSessionId ? 'drawer-item-active' : ''}}"
+        bindtap="onSelectSession"
+        bindlongpress="onRenameSession"
+        data-id="{{item.id}}"
+        data-title="{{item.title}}"
+      >
+        <text class="drawer-item-title">{{item.title}}</text>
+        <view
+          class="drawer-item-del"
+          catchtap="onDeleteSession"
+          data-id="{{item.id}}"
+        >✕</view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 消息列表 -->
+  <scroll-view
+    class="msg-list"
+    scroll-y
+    scroll-into-view="{{scrollToId}}"
+    scroll-with-animation
+    enhanced
+    show-scrollbar="{{false}}"
+  >
+    <!-- 空状态 -->
+    <view wx:if="{{messages.length === 0}}" class="empty-state">
+      <image class="empty-icon" src="/images/logo.png" mode="aspectFit"/>
+      <text class="empty-title">甘薯病害专家助手</text>
+      <text class="empty-desc">请描述您的甘薯出现了什么症状\n我来帮您诊断和给出防治建议</text>
+      <view class="quick-list">
+        <view class="quick-item" bindtap="onQuickAsk" data-q="甘薯叶片发黄是什么病？">叶片发黄？</view>
+        <view class="quick-item" bindtap="onQuickAsk" data-q="甘薯块根表面有黑色凹陷是什么病？">块根黑斑？</view>
+        <view class="quick-item" bindtap="onQuickAsk" data-q="甘薯贮藏时如何防止腐烂？">贮藏防腐？</view>
+        <view class="quick-item" bindtap="onQuickAsk" data-q="甘薯怎么施肥产量高？">施肥技巧？</view>
+      </view>
+    </view>
+
+    <!-- 消息气泡 -->
+    <view
+      wx:for="{{messages}}"
+      wx:key="id"
+      id="{{item.id}}"
+      class="msg-row {{item.role === 'user' ? 'msg-user' : 'msg-ai'}}"
+    >
+      <image
+        wx:if="{{item.role === 'assistant'}}"
+        class="avatar avatar-ai"
+        src="/images/ai_avatar.png"
+        mode="aspectFill"
+      />
+
+      <view class="bubble {{item.role === 'user' ? 'bubble-user' : 'bubble-ai'}}">
+        <view class="bubble-content">
+          <block wx:for="{{item.segments}}" wx:key="index" wx:for-item="seg">
+            <rich-text wx:if="{{seg.type === 'text'}}" nodes="{{seg.html}}" space="nbsp"/>
+            <image
+              wx:elif="{{seg.type === 'image'}}"
+              class="inline-img"
+              src="{{seg.url}}"
+              mode="widthFix"
+              bindtap="onPreviewImage"
+              data-url="{{seg.url}}"
+              lazy-load
+            />
+          </block>
+          <text wx:if="{{!item.done}}" class="cursor">▋</text>
+        </view>
+      </view>
+
+      <image
+        wx:if="{{item.role === 'user'}}"
+        class="avatar avatar-user"
+        src="/images/user_avatar.png"
+        mode="aspectFill"
+      />
+    </view>
+
+    <view class="list-bottom-pad"/>
+  </scroll-view>
+
+  <!-- 输入区 -->
+  <view class="input-bar">
+    <!-- 模式切换按钮 -->
+    <view class="mode-btn {{mode === 'pro' ? 'mode-pro' : 'mode-flash'}}" bindtap="onToggleMode">
+      <text>{{mode === 'pro' ? 'Pro' : 'Flash'}}</text>
+    </view>
+    <!-- 键盘/语音切换 -->
+    <view class="voice-toggle-btn" bindtap="onToggleInputMode">
+      <text>{{inputMode === 'keyboard' ? '🎤' : '⌨️'}}</text>
+    </view>
+    <!-- 键盘输入 -->
+    <textarea
+      wx:if="{{inputMode === 'keyboard'}}"
+      class="input-box"
+      value="{{inputText}}"
+      bindinput="onInputChange"
+      placeholder="描述症状，例如：叶片发黄，块根腐烂..."
+      placeholder-style="color:#bbb;"
+      maxlength="500"
+      auto-height
+      confirm-type="send"
+      bindconfirm="onSend"
+      adjust-position
+      cursor-spacing="16"
+    />
+    <!-- 语音输入 -->
+    <button
+      wx:else
+      class="voice-btn {{recording ? 'voice-btn-recording' : ''}}"
+      bindtouchstart="onVoiceStart"
+      catchtouchend="onVoiceEnd"
+      catchtouchcancel="onVoiceEnd"
+    >{{recording ? '松开结束' : '按住说话'}}</button>
+    <view class="send-btn {{sending || !inputText ? 'send-btn-disabled' : ''}}" bindtap="onSend">
+      <text wx:if="{{!sending}}">发送</text>
+      <view wx:else class="loading-dot"/>
+    </view>
+  </view>
+
+</view>
