@@ -39,8 +39,8 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     openid = Column(String(64), unique=True, index=True, nullable=False)
     nickname = Column(String(64), nullable=True)
-    created_at = Column(DateTime, default=datetime)
-    last_active = Column(DateTime, default=datetime, onupdate=datetime)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    last_active = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     conversations = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")
     farm_profile = relationship("FarmProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
@@ -54,7 +54,7 @@ class ChatSession(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     title = Column(String(100), nullable=False, default="新对话")
-    created_at = Column(DateTime, default=datetime)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="sessions")
     conversations = relationship("Conversation", back_populates="session", cascade="all, delete-orphan")
@@ -69,7 +69,7 @@ class Conversation(Base):
     session_id = Column(Integer, ForeignKey("chat_sessions.id"), nullable=True)
     role = Column(String(16), nullable=False)   # "user" | "assistant"
     content = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="conversations")
     session = relationship("ChatSession", back_populates="conversations")
@@ -84,7 +84,7 @@ class FarmProfile(Base):
     location = Column(String(128), nullable=True)    # 地理位置
     area_mu = Column(Float, nullable=True)           # 种植面积（亩）
     variety = Column(String(64), nullable=True)      # 主要种植品种
-    updated_at = Column(DateTime, default=datetime, onupdate=datetime)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user = relationship("User", back_populates="farm_profile")
 

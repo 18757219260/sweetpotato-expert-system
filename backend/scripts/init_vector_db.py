@@ -152,6 +152,7 @@ def init_vector_db(reset: bool = False):
                 "record_id": record["id"],
                 "name": record.get("name", ""),
                 "category": record.get("category", ""),
+                "image_id": record.get("image_id", ""),
                 "chunk_index": idx,
                 "keywords": ",".join(record.get("keywords", [])),
             })

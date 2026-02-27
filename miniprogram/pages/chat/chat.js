@@ -5,33 +5,19 @@ const { STATIC_BASE, API_BASE } = require('../../config')
 
 const recorderManager = wx.getRecorderManager()
 
-const IMAGE_MAP = {
-  soft_rot:      'soft_rot.jpg',
-  black_spot:    'black_spot.jpg',
-  stem_nematode: 'stem_nematode.jpg',
-  root_rot:      'root_rot.jpg',
-  virus:         'virus.jpg',
-  scab:          'scab.jpg',
-  hornworm:      'hornworm.jpg',
-  weevil:        'weevil.jpg',
-  armyworm:      'armyworm.jpg',
-  fertilizer:    'fertilizer.jpg',
-  storage:       'storage.jpg',
-  irrigation:    'irrigation.jpg',
-}
+
 
 const IMG_TAG_RE = /\[图片:\w+\]/g
+
 
 function buildSegments(segments) {
   return segments.map(seg => {
     if (seg.type === 'image') {
-      const filename = IMAGE_MAP[seg.id]
-      return { type: 'image', url: filename ? `${STATIC_BASE}/${filename}` : '' }
+      return { type: 'image', url: `${STATIC_BASE}/${seg.id}` }
     }
     return { type: 'text', html: mdToHtml(seg.content) }
-  }).filter(seg => seg.type !== 'image' || seg.url)
+  })
 }
-
 Page({
   data: {
     messages: [],

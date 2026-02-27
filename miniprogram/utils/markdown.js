@@ -44,13 +44,14 @@ function mdToHtml(md) {
       continue
     }
 
-    // 标题
+    const h4 = line.match(/^####\s+(.+)/)
     const h3 = line.match(/^###\s+(.+)/)
     const h2 = line.match(/^##\s+(.+)/)
     const h1 = line.match(/^#\s+(.+)/)
     if (h1) { result.push(`<h3 style="color:#2e7d32;margin:12rpx 0 6rpx;">${inlineFormat(h1[1])}</h3>`); i++; continue }
     if (h2) { result.push(`<h4 style="color:#388e3c;margin:10rpx 0 4rpx;">${inlineFormat(h2[1])}</h4>`); i++; continue }
     if (h3) { result.push(`<h5 style="color:#43a047;margin:8rpx 0 4rpx;">${inlineFormat(h3[1])}</h5>`); i++; continue }
+    if (h4) { result.push(`<h6 style="color:#66bb6a;margin:6rpx 0 2rpx;font-weight:bold;">${inlineFormat(h4[1])}</h6>`); i++; continue }
 
     // 引用块（> ）
     if (line.match(/^>\s*/)) {
@@ -111,6 +112,8 @@ function mdToHtml(md) {
 function inlineFormat(text) {
   return escapeHtml(text)
     // 先转义，再处理 markdown（因此下面用已转义后的符号）
+    .replace(/\$\\rightarrow\$/g, '→')
+    .replace(/\$\\Rightarrow\$/g, '⇒')
     // 加粗
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/__(.+?)__/g, '<strong>$1</strong>')

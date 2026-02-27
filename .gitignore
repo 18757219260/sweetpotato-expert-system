@@ -29,7 +29,7 @@ backend/data/app.db
 *.sqlite3
 # 忽略 ChromaDB 向量数据库生成的二进制索引目录（极其重要，否则会引发严重的代码库体积膨胀）
 backend/data/chroma_db/
-
+.claude/settings.local.json
 # ==========================================
 # 5. 动态多媒体流与 I/O 挂载目录 (Media & I/O)
 # 针对截图中可见的 static/images 目录
@@ -52,3 +52,5 @@ miniprogram/project.private.config.json
 .vscode/
 .idea/
 .DS_Store
+CLAUDE.md
+catch.py
