@@ -34,11 +34,7 @@ backend/data/chroma_db/
 # 5. 动态多媒体流与 I/O 挂载目录 (Media & I/O)
 # 针对截图中可见的 static/images 目录
 # ==========================================
-backend/static/images/
 temp_audio_files/
-*.wav
-*.jpg
-*.png
 
 # ==========================================
 # 6. 微信小程序特定的本地隐私配置 (Miniprogram)
