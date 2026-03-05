@@ -110,13 +110,22 @@
     <view class="voice-toggle-btn" bindtap="onToggleInputMode">
       <text>{{inputMode === 'keyboard' ? '🎤' : '⌨️'}}</text>
     </view>
+    <!-- 图片上传按钮 -->
+    <view class="image-upload-btn" bindtap="onChooseImage">
+      <text>📷</text>
+    </view>
+    <!-- 图片预览（如果有待发送的图片） -->
+    <view wx:if="{{pendingImage}}" class="image-preview">
+      <image src="{{pendingImage}}" mode="aspectFill" />
+      <view class="image-preview-close" bindtap="onClearImage">×</view>
+    </view>
     <!-- 键盘输入 -->
     <textarea
       wx:if="{{inputMode === 'keyboard'}}"
       class="input-box"
       value="{{inputText}}"
       bindinput="onInputChange"
-      placeholder="描述症状，例如：叶片发黄，块根腐烂..."
+      placeholder="{{pendingImage ? '添加描述（可选）...' : '描述症状，例如：叶片发黄，块根腐烂...'}}"
       placeholder-style="color:#bbb;"
       maxlength="500"
       auto-height
@@ -133,7 +142,7 @@
       catchtouchend="onVoiceEnd"
       catchtouchcancel="onVoiceEnd"
     >{{recording ? '松开结束' : '按住说话'}}</button>
-    <view class="send-btn {{sending || !inputText ? 'send-btn-disabled' : ''}}" bindtap="onSend">
+    <view class="send-btn {{sending || (!inputText && !pendingImage) ? 'send-btn-disabled' : ''}}" bindtap="onSend">
       <text wx:if="{{!sending}}">发送</text>
       <view wx:else class="loading-dot"/>
     </view>

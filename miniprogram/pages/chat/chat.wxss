@@ -300,6 +300,49 @@
   flex-shrink: 0;
 }
 
+/* ── 图片上传按钮 ── */
+.image-upload-btn {
+  width: 60rpx;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36rpx;
+  flex-shrink: 0;
+}
+
+/* ── 图片预览 ── */
+.image-preview {
+  position: relative;
+  width: 120rpx;
+  height: 120rpx;
+  margin: 0 12rpx;
+  border-radius: 12rpx;
+  overflow: hidden;
+  border: 2rpx solid #4CAF50;
+  flex-shrink: 0;
+}
+.image-preview image {
+  width: 100%;
+  height: 100%;
+}
+.image-preview-close {
+  position: absolute;
+  top: -8rpx;
+  right: -8rpx;
+  width: 40rpx;
+  height: 40rpx;
+  background: #f44336;
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32rpx;
+  font-weight: bold;
+  line-height: 1;
+}
+
 /* ── 按住说话按钮 ── */
 .voice-btn {
   flex: 1;

@@ -1,5 +1,105 @@
 [
   {
+    "id": "overview_disease",
+    "category": "病害",
+    "name": "甘薯主要病害概述",
+    "aliases": ["主要病害", "常见病害", "重要病害", "病害排序"],
+    "image_id": "",
+    "growth_stages": ["全生育期"],
+    "environmental_factors": [],
+    "applicable_regions": ["全国各产区"],
+    "soil_types": [],
+    "symptoms": {
+      "description": "甘薯生产中最重要的病害按危害程度排序为：1.黑斑病（最常见的种传病害，导致薯块发苦不可食用）、2.根腐病（导致死藤烂根，严重减产）、3.茎线虫病（引起薯块糠心空心）、4.软腐病（贮藏期主要病害，造成腐烂）、5.病毒病（导致退化减产）。",
+      "differential_diagnosis": ""
+    },
+    "causes": "这些病害分别由真菌、细菌、线虫和病毒引起，是甘薯生产中最常见、危害最大的病害类型。",
+    "control_measures": {
+      "preventive": ["使用脱毒种薯", "实行3年以上轮作", "种薯消毒", "合理施肥"],
+      "chemical": []
+    }
+  },
+  {
+    "id": "overview_pest",
+    "category": "虫害",
+    "name": "甘薯主要虫害概述",
+    "aliases": ["主要虫害", "常见虫害", "重要虫害", "虫害排序"],
+    "image_id": "",
+    "growth_stages": ["全生育期"],
+    "environmental_factors": [],
+    "applicable_regions": ["全国各产区"],
+    "soil_types": [],
+    "symptoms": {
+      "description": "甘薯生产中最重要的虫害按危害程度排序为：1.甘薯蚁象（钻蛀薯块，检疫性害虫）、2.甘薯小象甲（钻蛀薯块，检疫性害虫）、3.蛴螬（地下害虫，啃食薯块）、4.金针虫（地下害虫，钻蛀薯块）、5.小地老虎（咬断幼苗）。",
+      "differential_diagnosis": ""
+    },
+    "causes": "这些虫害在甘薯生长期和贮藏期均可造成严重危害，需要综合防治。",
+    "control_measures": {
+      "preventive": ["清洁田园", "灯光诱杀", "生物防治"],
+      "chemical": ["高效氯氰菊酯", "苏云金杆菌"]
+    }
+  },
+  {
+    "id": "overview_variety",
+    "category": "品种资源",
+    "name": "甘薯主要品种概述",
+    "aliases": ["主要品种", "常见品种", "重要品种", "品种排序", "推荐品种"],
+    "image_id": "",
+    "growth_stages": ["全生育期"],
+    "environmental_factors": [],
+    "applicable_regions": ["全国各产区"],
+    "soil_types": [],
+    "symptoms": {
+      "description": "我国主要甘薯品种按用途和推广面积排序为：1.烟薯25（烘烤型，口感最佳）、2.普薯32（西瓜红，烘烤型）、3.龙薯9号（淀粉型，高产）、4.济薯26（鲜食兼用型）、5.徐薯34（淀粉型）。",
+      "differential_diagnosis": ""
+    },
+    "causes": "不同品种适应不同用途和种植区域，应根据当地气候和市场需求选择合适品种。",
+    "control_measures": {
+      "preventive": ["选择脱毒种薯", "根据用途选择品种", "注意品种抗病性"],
+      "chemical": []
+    }
+  },
+  {
+    "id": "overview_weed",
+    "category": "草害",
+    "name": "甘薯主要草害概述",
+    "aliases": ["主要草害", "常见杂草", "重要草害", "草害排序"],
+    "image_id": "",
+    "growth_stages": ["全生育期"],
+    "environmental_factors": [],
+    "applicable_regions": ["全国各产区"],
+    "soil_types": [],
+    "symptoms": {
+      "description": "甘薯田最常见的杂草按危害程度排序为：1.马唐（禾本科，生长迅速）、2.反枝苋（阔叶杂草，与甘薯争肥）、3.铁苋菜（阔叶杂草）、4.香附子（莎草科，难以根除）、5.狗尾草（禾本科）。",
+      "differential_diagnosis": ""
+    },
+    "causes": "杂草与甘薯争夺养分、水分和光照，严重影响产量。",
+    "control_measures": {
+      "preventive": ["地膜覆盖", "人工除草", "合理密植"],
+      "chemical": ["乙草胺", "精喹禾灵"]
+    }
+  },
+  {
+    "id": "overview_disaster",
+    "category": "农业灾害",
+    "name": "甘薯主要农业灾害概述",
+    "aliases": ["主要灾害", "常见灾害", "重要灾害", "灾害排序"],
+    "image_id": "",
+    "growth_stages": ["全生育期"],
+    "environmental_factors": [],
+    "applicable_regions": ["全国各产区"],
+    "soil_types": [],
+    "symptoms": {
+      "description": "甘薯生产中最常见的农业灾害按发生频率和危害程度排序为：1.涝害（积水导致烂根）、2.冷害与冻害（低温影响生长）、3.大田冻害（霜冻危害）、4.高温逼熟与热害（高温导致早衰）、5.连阴雨与寡照灾害（光照不足影响光合作用）。",
+      "differential_diagnosis": ""
+    },
+    "causes": "气候异常和极端天气是造成农业灾害的主要原因。",
+    "control_measures": {
+      "preventive": ["选择排水良好的地块", "适时播种", "覆盖保温"],
+      "chemical": []
+    }
+  },
+  {
     "id": "variety_001",
     "category": "品种资源",
     "name": "烟薯25",

@@ -15,7 +15,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from backend.api.deps import rate_limit_key
-from backend.api import auth, chat, history, sessions, voice
+from backend.api import auth, chat, history, sessions, voice, upload
 from backend.database import init_db
 
 load_dotenv()
@@ -72,6 +72,7 @@ app.include_router(chat.router)
 app.include_router(history.router)
 app.include_router(sessions.router)
 app.include_router(voice.router)
+app.include_router(upload.router)
 
 # ── 静态资源（病害图片）────────────────────────────────────────────────────────
 app.mount(

@@ -56,6 +56,14 @@ async def _generate(
     """
     异步生成器：执行 RAG + LLM 流式问答，并在结束时落库。
     """
+    # 确保 question 是字符串
+    question = str(question) if question is not None else ""
+
+    print(f"[DEBUG _generate] question type: {type(question)}, value: {question[:50]}...")
+    print(f"[DEBUG _generate] user_id type: {type(user_id)}, value: {user_id}")
+    print(f"[DEBUG _generate] mode type: {type(mode)}, value: {mode}")
+    print(f"[DEBUG _generate] session_id type: {type(session_id)}, value: {session_id}")
+
     # 若未传 session_id，自动新建会话（取问题前 20 字为标题）
     if session_id is None:
         title = question[:20] if len(question) > 20 else question
@@ -78,10 +86,14 @@ async def _generate(
         for row in reversed(history_rows)
     ]
 
+    print(f"[DEBUG _generate] history type: {type(history)}, length: {len(history)}")
+    print(f"[DEBUG _generate] history content: {history}")
+
     clean_answer = ""
     images: list[str] = []
 
     try:
+        print(f"[DEBUG _generate] About to call chat_stream with question={question[:30]}, history type={type(history)}, mode={mode}")
         async for chunk in chat_stream(question, history, mode=mode):
             if chunk["type"] == "text":
                 yield _sse({"type": "text", "content": chunk["content"]})

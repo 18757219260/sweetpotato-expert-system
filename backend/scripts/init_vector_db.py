@@ -67,14 +67,52 @@ def build_full_text(record: dict) -> str:
     parts = [
         f"名称：{record.get('name', '')}",
         f"类别：{record.get('category', '')}",
-        f"症状：{record.get('symptoms', '')}",
-        f"原因：{record.get('causes', '')}",
-        f"防治方法：{record.get('treatment', '')}",
     ]
-    if record.get("prevention"):
+
+    # 处理别名（新字段）
+    if record.get("aliases"):
+        parts.append(f"别名：{'、'.join(record['aliases'])}")
+
+    # 处理嵌套症状对象
+    symptoms = record.get("symptoms", {})
+    if isinstance(symptoms, dict):
+        if symptoms.get("description"):
+            parts.append(f"症状描述：{symptoms['description']}")
+        if symptoms.get("differential_diagnosis"):
+            parts.append(f"鉴别诊断：{symptoms['differential_diagnosis']}")
+    elif isinstance(symptoms, str):  # 向后兼容
+        parts.append(f"症状：{symptoms}")
+
+    # 处理原因
+    if record.get("causes"):
+        parts.append(f"原因：{record['causes']}")
+
+    # 处理嵌套防治措施对象
+    control = record.get("control_measures", {})
+    if isinstance(control, dict):
+        if control.get("preventive"):
+            parts.append(f"预防措施：{'；'.join(control['preventive'])}")
+        if control.get("chemical"):
+            parts.append(f"化学防治：{'；'.join(control['chemical'])}")
+    elif record.get("treatment"):  # 向后兼容
+        parts.append(f"防治方法：{record['treatment']}")
+    elif record.get("prevention"):  # 向后兼容
         parts.append(f"预防措施：{record['prevention']}")
+
+    # 处理新增数组字段
+    if record.get("growth_stages"):
+        parts.append(f"生育期：{'、'.join(record['growth_stages'])}")
+    if record.get("environmental_factors"):
+        parts.append(f"环境因素：{'、'.join(record['environmental_factors'])}")
+    if record.get("applicable_regions"):
+        parts.append(f"适用地区：{'、'.join(record['applicable_regions'])}")
+    if record.get("soil_types"):
+        parts.append(f"土壤类型：{'、'.join(record['soil_types'])}")
+
+    # 处理关键词
     if record.get("keywords"):
         parts.append(f"关键词：{'、'.join(record['keywords'])}")
+
     return "\n".join(parts)
 
 
@@ -155,6 +193,9 @@ def init_vector_db(reset: bool = False):
                 "image_id": record.get("image_id", ""),
                 "chunk_index": idx,
                 "keywords": ",".join(record.get("keywords", [])),
+                "growth_stages": ",".join(record.get("growth_stages", [])),
+                "environmental_factors": ",".join(record.get("environmental_factors", [])),
+                "applicable_regions": ",".join(record.get("applicable_regions", [])),
             })
 
     if not to_embed_texts:

@@ -31,6 +31,8 @@ Page({
     sessions: [],
     currentSessionId: null,
     drawerOpen: false,
+    // 图片上传
+    pendingImage: null,  // 暂存待发送的图片路径
   },
 
   onLoad() {
@@ -224,6 +226,16 @@ Page({
   // ── 发送消息 ──────────────────────────────────────────────────────────────
   async onSend() {
     const question = this.data.inputText.trim()
+    const pendingImage = this.data.pendingImage
+
+    // 如果有图片，调用图片上传接口
+    if (pendingImage) {
+      this._uploadAndAnalyze(pendingImage, question)
+      this.setData({ inputText: '', pendingImage: null })
+      return
+    }
+
+    // 纯文本消息
     if (!question || this.data.sending) return
 
     this.setData({ inputText: '', sending: true })
@@ -303,6 +315,157 @@ Page({
       return { ...m, segments, done, rawText: rawText !== undefined ? rawText : m.rawText }
     })
     this.setData({ messages })
+  },
+
+  // ── 图片上传 ──────────────────────────────────────────────────────────────
+  onChooseImage() {
+    wx.chooseMedia({
+      count: 1,
+      mediaType: ['image'],
+      sourceType: ['album', 'camera'],
+      success: (res) => {
+        const tempFilePath = res.tempFiles[0].tempFilePath
+        // 暂存图片路径，不立即上传
+        this.setData({ pendingImage: tempFilePath })
+        wx.showToast({ title: '图片已选择，可添加描述后发送', icon: 'none', duration: 2000 })
+      },
+      fail: (err) => {
+        console.error('[image] chooseMedia fail:', err)
+        wx.showToast({ title: '选择图片失败', icon: 'none' })
+      }
+    })
+  },
+
+  onClearImage() {
+    this.setData({ pendingImage: null })
+  },
+
+  async _uploadAndAnalyze(filePath, description) {
+    if (this.data.sending) return
+    this.setData({ sending: true })
+
+    // 1. 添加用户消息（显示图片和描述）
+    const segments = [{ type: 'image', url: filePath }]
+    if (description) {
+      segments.push({ type: 'text', html: description })
+    }
+    const userMsg = {
+      id: `u_${Date.now()}`,
+      role: 'user',
+      segments: segments,
+      done: true,
+    }
+    this.setData({ messages: [...this.data.messages, userMsg] })
+    this._scrollToBottom()
+
+    // 2. 添加 AI 消息占位
+    const aiMsgId = `a_${Date.now()}`
+    const aiMsg = {
+      id: aiMsgId,
+      role: 'assistant',
+      segments: [{ type: 'text', html: '<span style="color:#999;">正在识别图片...</span>' }],
+      done: false,
+    }
+    this.setData({ messages: [...this.data.messages, aiMsg] })
+    this._scrollToBottom()
+
+    // 3. 上传图片并获取流式响应
+    const token = wx.getStorageSync('token')
+    const API_BASE = getApp().globalData.apiBase
+
+    wx.uploadFile({
+      url: `${API_BASE}/api/chat/upload_image`,
+      filePath: filePath,
+      name: 'file',
+      formData: {
+        mode: this.data.mode,
+        session_id: this.data.currentSessionId,
+        stream: 'false',  // 微信小程序不支持流式响应
+        description: description || ''  // 传递用户的文字描述
+      },
+      header: { Authorization: `Bearer ${token}` },
+      success: (res) => {
+        if (res.statusCode !== 200) {
+          this._updateAiMsg(aiMsgId, [{ type: 'text', html: `<span style="color:#f44336;">识别失败：${res.data}</span>` }], true)
+          this.setData({ sending: false })
+          return
+        }
+
+        // 解析完整 JSON 响应
+        this._parseUploadResponse(res.data, aiMsgId)
+      },
+      fail: (err) => {
+        console.error('[upload] fail:', err)
+        this._updateAiMsg(aiMsgId, [{ type: 'text', html: '<span style="color:#f44336;">上传失败，请重试</span>' }], true)
+        this.setData({ sending: false })
+      }
+    })
+  },
+
+  _parseUploadResponse(data, aiMsgId) {
+    // 处理完整 JSON 响应
+    console.log('[DEBUG] _parseUploadResponse called, data type:', typeof data)
+    console.log('[DEBUG] data:', data)
+
+    try {
+      // 如果 data 已经是对象，直接使用；否则解析 JSON
+      const result = typeof data === 'string' ? JSON.parse(data) : data
+
+      console.log('[DEBUG] result.type:', result.type)
+      console.log('[DEBUG] result.llm_response length:', result.llm_response ? result.llm_response.length : 0)
+
+      if (result.type === 'error') {
+        this._updateAiMsg(aiMsgId, [{ type: 'text', html: `<span style="color:#f44336;">${result.detail}</span>` }], true)
+      } else if (result.type === 'low_confidence') {
+        // 置信度过低 - 直接显示 LLM 响应（不显示 VL 分析框）
+        const segments = []
+
+        // 添加 LLM 响应
+        if (result.segments && result.segments.length > 0) {
+          // 使用 buildSegments 函数转换格式
+          const convertedSegments = buildSegments(result.segments)
+          segments.push(...convertedSegments)
+        } else if (result.llm_response) {
+          segments.push({ type: 'text', html: mdToHtml(result.llm_response) })
+        }
+        this._updateAiMsg(aiMsgId, segments, true)
+      } else if (result.type === 'success') {
+        // 置信度足够，显示识别结果和 LLM 响应
+        const segments = []
+
+        // 添加 CV 识别结果（带概率）
+        if (result.cv_result) {
+          segments.push({
+            type: 'text',
+            html: `<div style="background:#e3f2fd;padding:12px;border-radius:8px;margin-bottom:12px;"><strong>🔍 识别结果：</strong><br/>${result.cv_result.replace(/\n/g, '<br/>')}</div>`
+          })
+        }
+
+        // 添加 LLM 诊断建议
+        // 优先使用 segments（包含图片），否则使用 llm_response（纯文本）
+        if (result.segments && result.segments.length > 0) {
+          console.log('[DEBUG] Using segments from backend:', result.segments.length)
+          // 使用 buildSegments 函数转换格式
+          const convertedSegments = buildSegments(result.segments)
+          segments.push(...convertedSegments)
+        } else if (result.llm_response) {
+          console.log('[DEBUG] Using llm_response (no segments)')
+          segments.push({ type: 'text', html: mdToHtml(result.llm_response) })
+        } else {
+          console.log('[DEBUG] LLM response is empty!')
+        }
+
+        this._updateAiMsg(aiMsgId, segments, true)
+      } else {
+        // 兼容旧格式
+        this._updateAiMsg(aiMsgId, [{ type: 'text', html: result.content || data }], true)
+      }
+    } catch (e) {
+      console.error('[parse] error:', e)
+      this._updateAiMsg(aiMsgId, [{ type: 'text', html: `<span style="color:#f44336;">解析响应失败</span>` }], true)
+    }
+    this.setData({ sending: false })
+    this._scrollToBottom()
   },
 
   // ── 模式切换 ──────────────────────────────────────────────────────────────
