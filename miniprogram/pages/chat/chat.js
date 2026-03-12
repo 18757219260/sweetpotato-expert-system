@@ -33,11 +33,31 @@ Page({
     drawerOpen: false,
     // 图片上传
     pendingImage: null,  // 暂存待发送的图片路径
+    // 用户信息
+    userAvatarUrl: '/images/user-avatar.png',  // 默认头像
   },
 
   onLoad() {
     this._initSessions()
     this._initVoice()
+    this._getUserInfo()
+  },
+
+  // ── 获取用户信息 ──────────────────────────────────────────────────────────
+  _getUserInfo() {
+    wx.getUserProfile({
+      desc: '用于显示用户头像',
+      success: (res) => {
+        console.log('[userInfo] getUserProfile success:', res.userInfo)
+        this.setData({
+          userAvatarUrl: res.userInfo.avatarUrl
+        })
+      },
+      fail: (err) => {
+        console.log('[userInfo] getUserProfile fail:', err)
+        // 使用默认头像
+      }
+    })
   },
 
   // ── 语音初始化 ────────────────────────────────────────────────────────────
@@ -216,6 +236,11 @@ Page({
         }
       },
     })
+  },
+
+  // ── 打开农场档案 ────────────────────────────────────────────────────────────
+  onOpenFarm() {
+    wx.navigateTo({ url: '/pages/farm/farm' })
   },
 
   // ── 输入框 ────────────────────────────────────────────────────────────────

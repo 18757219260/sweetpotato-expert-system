@@ -15,6 +15,11 @@
       <text class="drawer-title">对话历史</text>
       <view class="drawer-new-btn" bindtap="onNewSession">+ 新对话</view>
     </view>
+    <!-- 农场档案按钮 -->
+    <view class="drawer-farm-btn" bindtap="onOpenFarm">
+      <text class="farm-icon">🍠</text>
+      <text class="farm-text">农场档案</text>
+    </view>
     <scroll-view class="drawer-list" scroll-y>
       <view
         wx:for="{{sessions}}"
@@ -47,8 +52,13 @@
     <!-- 空状态 -->
     <view wx:if="{{messages.length === 0}}" class="empty-state">
       <image class="empty-icon" src="/images/logo.png" mode="aspectFit"/>
-      <text class="empty-title">甘薯病害专家助手</text>
+      <text class="empty-title">甘薯专家助手</text>
       <text class="empty-desc">请描述您的甘薯出现了什么症状\n我来帮您诊断和给出防治建议</text>
+      <!-- 编辑农场档案按钮 -->
+      <view class="farm-profile-btn" bindtap="onOpenFarm">
+        <text class="farm-profile-icon">🍠</text>
+        <text class="farm-profile-text">编辑农场档案</text>
+      </view>
       <view class="quick-list">
         <view class="quick-item" bindtap="onQuickAsk" data-q="甘薯叶片发黄是什么病？">叶片发黄？</view>
         <view class="quick-item" bindtap="onQuickAsk" data-q="甘薯块根表面有黑色凹陷是什么病？">块根黑斑？</view>
@@ -64,10 +74,11 @@
       id="{{item.id}}"
       class="msg-row {{item.role === 'user' ? 'msg-user' : 'msg-ai'}}"
     >
+      <!-- AI 头像（左侧） -->
       <image
         wx:if="{{item.role === 'assistant'}}"
         class="avatar avatar-ai"
-        src="/images/ai_avatar.png"
+        src="/images/logo.png"
         mode="aspectFill"
       />
 
@@ -89,10 +100,11 @@
         </view>
       </view>
 
+      <!-- 用户头像（右侧） -->
       <image
         wx:if="{{item.role === 'user'}}"
         class="avatar avatar-user"
-        src="/images/user_avatar.png"
+        src="{{userAvatarUrl}}"
         mode="aspectFill"
       />
     </view>

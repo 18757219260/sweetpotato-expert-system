@@ -26,7 +26,7 @@ from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
 from backend.api.deps import get_current_user, get_db, rate_limit_key
-from backend.database import ChatSession, Conversation, User
+from backend.database import ChatSession, Conversation, User, FarmProfile
 from backend.services.llm_service import chat_stream
 
 RATE_LIMIT = os.getenv("RATE_LIMIT_PER_DAY", "20")
@@ -59,10 +59,10 @@ async def _generate(
     # 确保 question 是字符串
     question = str(question) if question is not None else ""
 
-    print(f"[DEBUG _generate] question type: {type(question)}, value: {question[:50]}...")
-    print(f"[DEBUG _generate] user_id type: {type(user_id)}, value: {user_id}")
-    print(f"[DEBUG _generate] mode type: {type(mode)}, value: {mode}")
-    print(f"[DEBUG _generate] session_id type: {type(session_id)}, value: {session_id}")
+    # print(f"[DEBUG _generate] question type: {type(question)}, value: {question[:50]}...")
+    # print(f"[DEBUG _generate] user_id type: {type(user_id)}, value: {user_id}")
+    # print(f"[DEBUG _generate] mode type: {type(mode)}, value: {mode}")
+    # print(f"[DEBUG _generate] session_id type: {type(session_id)}, value: {session_id}")
 
     # 若未传 session_id，自动新建会话（取问题前 20 字为标题）
     if session_id is None:
@@ -86,15 +86,29 @@ async def _generate(
         for row in reversed(history_rows)
     ]
 
-    print(f"[DEBUG _generate] history type: {type(history)}, length: {len(history)}")
-    print(f"[DEBUG _generate] history content: {history}")
+    # print(f"[DEBUG _generate] history type: {type(history)}, length: {len(history)}")
+    # print(f"[DEBUG _generate] history content: {history}")
+
+    # 获取用户农场档案
+    farm_profile = db.query(FarmProfile).filter(FarmProfile.user_id == user_id).first()
+    farm_context = None
+    if farm_profile:
+        location = f"{farm_profile.province}{farm_profile.city}{farm_profile.district}"
+        farm_context = f"用户农场信息：位于{location}"
+        if farm_profile.area_mu:
+            farm_context += f"，种植面积{farm_profile.area_mu}亩"
+        if farm_profile.soil_type:
+            farm_context += f"，土壤类型为{farm_profile.soil_type}"
+        if farm_profile.other_info:
+            farm_context += f"，其他信息：{farm_profile.other_info}"
+        # print(f"[DEBUG _generate] farm_context: {farm_context}")
 
     clean_answer = ""
     images: list[str] = []
 
     try:
-        print(f"[DEBUG _generate] About to call chat_stream with question={question[:30]}, history type={type(history)}, mode={mode}")
-        async for chunk in chat_stream(question, history, mode=mode):
+        # print(f"[DEBUG _generate] About to call chat_stream with question={question[:30]}, history type={type(history)}, mode={mode}")
+        async for chunk in chat_stream(question, history, mode=mode, farm_context=farm_context):
             if chunk["type"] == "text":
                 yield _sse({"type": "text", "content": chunk["content"]})
             elif chunk["type"] == "done":

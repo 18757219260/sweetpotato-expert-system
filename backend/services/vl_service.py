@@ -172,7 +172,7 @@ def analyze_image_with_vl(image_path: str, user_description: str = "") -> Dict:
 # ── 测试代码 ─────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     # 测试 VL 服务
-    test_image = Path(__file__).parent.parent / "data" / "uploads" / "test.jpg"
+    test_image = Path(__file__).parent.parent / "static" / "images" / "abiotic_stress" / "1.png"
 
     if test_image.exists():
         result = analyze_image_with_vl(str(test_image), "叶片发黄")

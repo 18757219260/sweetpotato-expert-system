@@ -1,0 +1,82 @@
+<!--miniprogram/pages/farm/farm.wxml-->
+<view class="container">
+  <view class="header">
+    <text class="title">农场档案</text>
+    <text class="subtitle">完善您的种植信息，获得更精准的建议</text>
+  </view>
+
+  <view class="form">
+    <!-- 地理位置 -->
+    <view class="form-section">
+      <text class="section-title">地理位置</text>
+
+      <view class="form-item">
+        <text class="label">省份</text>
+        <picker mode="selector" range="{{provinces}}" value="{{provinceIndex}}" bindchange="onProvinceChange">
+          <view class="picker">{{provinces[provinceIndex]}}</view>
+        </picker>
+      </view>
+
+      <view class="form-item">
+        <text class="label">城市</text>
+        <picker mode="selector" range="{{cities}}" value="{{cityIndex}}" bindchange="onCityChange">
+          <view class="picker">{{cities[cityIndex]}}</view>
+        </picker>
+      </view>
+
+      <view class="form-item">
+        <text class="label">区县</text>
+        <picker mode="selector" range="{{districts}}" value="{{districtIndex}}" bindchange="onDistrictChange">
+          <view class="picker">{{districts[districtIndex]}}</view>
+        </picker>
+      </view>
+    </view>
+
+    <!-- 种植面积 -->
+    <view class="form-section">
+      <text class="section-title">种植面积</text>
+      <view class="form-item">
+        <text class="label">面积（亩）</text>
+        <input
+          class="input"
+          type="digit"
+          value="{{area_mu}}"
+          bindinput="onAreaInput"
+          placeholder="请输入种植面积"
+        />
+      </view>
+    </view>
+
+    <!-- 土壤类型 -->
+    <view class="form-section">
+      <text class="section-title">土壤类型</text>
+      <view class="form-item">
+        <text class="label">土壤</text>
+        <picker mode="selector" range="{{soilTypes}}" value="{{soilTypeIndex}}" bindchange="onSoilTypeChange">
+          <view class="picker">{{soilTypes[soilTypeIndex]}}</view>
+        </picker>
+      </view>
+    </view>
+
+    <!-- 其他信息 -->
+    <view class="form-section">
+      <text class="section-title">其他信息</text>
+      <view class="form-item">
+        <textarea
+          class="textarea"
+          value="{{other_info}}"
+          bindinput="onOtherInfoInput"
+          placeholder="如前茬作物、种植品种、特殊情况等"
+          maxlength="500"
+        />
+      </view>
+    </view>
+  </view>
+
+  <!-- 保存按钮 -->
+  <view class="footer">
+    <button class="save-btn" bindtap="onSave" loading="{{loading}}" disabled="{{loading}}">
+      {{hasProfile ? '更新档案' : '保存档案'}}
+    </button>
+  </view>
+</view>

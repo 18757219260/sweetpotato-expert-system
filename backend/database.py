@@ -75,15 +75,18 @@ class Conversation(Base):
     session = relationship("ChatSession", back_populates="conversations")
 
 
-# ── 农场档案表（Phase 5 预留）────────────────────────────────────────────────
+# ── 农场档案表 ────────────────────────────────────────────────────────────────
 class FarmProfile(Base):
     __tablename__ = "farm_profiles"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
-    location = Column(String(128), nullable=True)    # 地理位置
+    province = Column(String(32), nullable=True)     # 省
+    city = Column(String(32), nullable=True)         # 市
+    district = Column(String(32), nullable=True)     # 区
     area_mu = Column(Float, nullable=True)           # 种植面积（亩）
-    variety = Column(String(64), nullable=True)      # 主要种植品种
+    soil_type = Column(String(64), nullable=True)    # 土壤类型
+    other_info = Column(Text, nullable=True)         # 其他信息
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user = relationship("User", back_populates="farm_profile")

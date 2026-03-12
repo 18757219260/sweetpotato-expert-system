@@ -34,7 +34,7 @@ load_dotenv()
 
 # ── 配置 ─────────────────────────────────────────────────────────────────────
 QWEN_API_KEY = os.getenv("QWEN_API_KEY")
-CHROMA_DB_PATH = os.getenv("CHROMA_DB_PATH", "./backend/data/chroma_db")
+CHROMA_DB_PATH = os.getenv("CHROMA_DB_PATH", "")
 KB_PATH = Path(__file__).parent.parent /"data" / "knowledge_base.json"
 COLLECTION_NAME = "sweet_potato_knowledge"
 EMBEDDING_MODEL = "text-embedding-v3"

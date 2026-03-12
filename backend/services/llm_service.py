@@ -7,8 +7,6 @@ services/llm_service.py - RAG 与核心大模型服务
 3. 核心流式对话：结合 RAG 片段 + 兜底 Prompt + 图片触发 JSON 提取
 4. 对话历史滑动窗口（保留最近 3 轮）
 """
-
-# !! ChromaDB SQLite 补丁必须在所有 import 之前 !!
 __import__('pysqlite3')
 import sys
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
@@ -21,7 +19,8 @@ import random
 import chromadb
 from dotenv import load_dotenv
 from openai import OpenAI
-
+from backend.services.mcp_service import TOOLS, execute_tool, format_tool_result
+from datetime import datetime
 load_dotenv()
 
 # ── 配置 ─────────────────────────────────────────────────────────────────────
@@ -133,15 +132,19 @@ def retrieve_context(query: str) -> tuple[str, bool]:
 # ── 3. 构建系统 Prompt ────────────────────────────────────────────────────────
 _SYSTEM_TEMPLATE ="""\
 你是一位专业的甘薯种植与病害防治专家助手，服务于广大农户。
-
+【当前系统时间】: {current_date}
 【本地知识库片段】:
 {context}
+
+{farm_info}
 
 【回答要求】:
 1. 严格基于本地知识库片段回答，保持专业、准确、通俗易懂。
 2. 知识库中的id大小代表重要程度，越小越重要，当回答涉及多个病害、虫害、草害、品种、灾害时，优先介绍重要程度更高的（id更小的）片段内容。
 3. 当检索不到相关知识片段时，明确告知用户"未在本地知识库检索到相关知识片段"，然后用自己的通用农业知识来回答问题。
 4. 如果用户的问题与甘薯无关，请礼貌拒绝并引导用户提问甘薯相关问题。
+5. 如果提供了用户农场信息，请结合当地气候、土壤特点给出针对性建议。
+6. 当用户询问天气、气温、降雨、是否适合打药等时效性问题时，你可以调用工具获取实时天气信息。
 
 【图片插入要求 (极其严格)】:
 在回答正文中，每当你详细介绍某种病害或农事操作时，你必须检查【本地知识库片段】的标题中是否为其标注了"(关联图片标识: xxx)"。
@@ -150,8 +153,15 @@ _SYSTEM_TEMPLATE ="""\
 绝对禁止捏造、猜测或输出片段中未提供的图片标识。如果片段未提供标识，则不插入任何标记。\
 """
 
-def build_system_prompt(context: str) -> str:
-    return _SYSTEM_TEMPLATE.format(context=context if context else "（本次查询未检索到相关知识片段）")
+def build_system_prompt(context: str, farm_context: str = None) -> str:
+    farm_info = ""
+    if farm_context:
+        farm_info = f"【{farm_context}】"
+    real_current_date = datetime.now().strftime("%Y年%m月%d日")
+    return _SYSTEM_TEMPLATE.format(current_date=real_current_date,
+        context=context if context else "（本次查询未检索到相关知识片段）",
+        farm_info=farm_info
+    )
 
 
 # ── 4. 对话历史滑动窗口 ───────────────────────────────────────────────────────
@@ -225,12 +235,14 @@ async def chat_stream(
     user_question: str,
     history: list[dict],
     mode: str = "pro",   # "pro" = 查询重写+plus | "flash" = 直接检索+flash
+    farm_context: str = None,  # 用户农场信息
 ) -> AsyncGenerator[dict, None]:
     """
     核心问答流式生成器。
 
     mode="pro"  : 查询重写（flash）→ 精准检索 → qwen3.5-plus 回答（准确率优先）
     mode="flash": 直接检索 → qwen3.5-flash 回答（速度优先）
+    farm_context: 用户农场档案信息（可选）
 
     每次 yield 一个 dict：
       {"type": "text",   "content": "..."}      # 文本增量片段
@@ -256,30 +268,98 @@ async def chat_stream(
         chat_model = CHAT_MODEL_PRO
 
     # Step 3: 构建消息列表
-    system_prompt = build_system_prompt(context)
+    system_prompt = build_system_prompt(context, farm_context)
     trimmed_history = trim_history(history)
 
     messages = [{"role": "system", "content": system_prompt}]
     messages.extend(trimmed_history)
     messages.append({"role": "user", "content": user_question})
 
-    # Step 4: 调用通义千问流式接口
-    stream = _qwen.chat.completions.create(
+    # Step 4: 调用通义千问流式接口（支持 tool calling）
+    # 第一次调用：检查是否需要工具调用
+    response = _qwen.chat.completions.create(
         model=chat_model,
         messages=messages,
-        stream=True,
+        tools=TOOLS,
         temperature=0.7,
         max_tokens=1500,
         extra_body={"enable_thinking": False},
     )
 
-    raw_answer_parts: list[str] = []
+    # 检查是否有工具调用
+    tool_calls = response.choices[0].message.tool_calls
 
-    for chunk in stream:
-        delta = chunk.choices[0].delta
-        if delta.content:
-            raw_answer_parts.append(delta.content)
-            yield {"type": "text", "content": delta.content}
+    if tool_calls:
+        # 有工具调用：执行工具并继续对话
+        # 将 assistant 消息转换为字典格式
+        assistant_message = {
+            "role": "assistant",
+            "content": response.choices[0].message.content or "",
+            "tool_calls": [
+                {
+                    "id": tc.id,
+                    "type": "function",
+                    "function": {
+                        "name": tc.function.name,
+                        "arguments": tc.function.arguments
+                    }
+                }
+                for tc in tool_calls
+            ]
+        }
+        messages.append(assistant_message)
+
+        for tool_call in tool_calls:
+            tool_name = tool_call.function.name
+            tool_args = json.loads(tool_call.function.arguments)
+
+            # 执行工具
+            tool_result = execute_tool(tool_name, tool_args)
+
+            # 添加工具调用结果到消息列表
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "name": tool_name,
+                "content": json.dumps(tool_result, ensure_ascii=False)
+            })
+
+        # 第二次调用：基于工具结果生成最终回答（流式）
+        stream = _qwen.chat.completions.create(
+            model=chat_model,
+            messages=messages,
+            stream=True,
+            temperature=0.7,
+            max_tokens=1500,
+            extra_body={"enable_thinking": False},
+        )
+
+        raw_answer_parts: list[str] = []
+
+        for chunk in stream:
+            delta = chunk.choices[0].delta
+            if delta.content:
+                raw_answer_parts.append(delta.content)
+                yield {"type": "text", "content": delta.content}
+    else:
+        # 无工具调用：直接流式返回
+        # 重新调用以获取流式响应
+        stream = _qwen.chat.completions.create(
+            model=chat_model,
+            messages=messages,
+            stream=True,
+            temperature=0.7,
+            max_tokens=1500,
+            extra_body={"enable_thinking": False},
+        )
+
+        raw_answer_parts: list[str] = []
+
+        for chunk in stream:
+            delta = chunk.choices[0].delta
+            if delta.content:
+                raw_answer_parts.append(delta.content)
+                yield {"type": "text", "content": delta.content}
 
     # Step 5: 提取图片标识并清理回答
     raw_answer = "".join(raw_answer_parts)

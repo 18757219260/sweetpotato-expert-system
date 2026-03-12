@@ -198,7 +198,7 @@ def main():
     print(f"[3/4] 需要处理 {len(to_download)} 个 image_id")
 
     if not to_download:
-        print("✅ 所有图片已充足，无需下载")
+        print(" 所有图片已充足")
         return
 
     # 3. 批量下载

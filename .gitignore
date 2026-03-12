@@ -1,19 +1,48 @@
 
-**/__pycache__/
+__pycache__/
 *.py[cod]
 *$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
 .venv/
 venv/
 ENV/
-.env
-backend/data/app.db
-*.sqlite3
-backend/data/chroma_db/
-.claude/settings.local.json
-temp_audio_files/
-miniprogram/project.private.config.json
+backend/static/images/
+
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
+
+.env
+.env.local
+
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+
+# OS
 .DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*.cache
+
+# Uploads
+backend/data/uploads/*
+!backend/data/uploads/.gitkeep
 CLAUDE.md
-catch.py
+# ChromaDB
+backend/data/chroma_db/
+
+# Claude
+.claude/
