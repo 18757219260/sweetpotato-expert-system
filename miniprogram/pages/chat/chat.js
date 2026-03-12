@@ -33,31 +33,30 @@ Page({
     drawerOpen: false,
     // 图片上传
     pendingImage: null,  // 暂存待发送的图片路径
-    // 用户信息
-    userAvatarUrl: '/images/user-avatar.png',  // 默认头像
+    // 用户头像
+    userAvatarUrl: '',  // 用户微信头像
   },
 
   onLoad() {
     this._initSessions()
     this._initVoice()
-    this._getUserInfo()
+    this._loadUserAvatar()
   },
 
-  // ── 获取用户信息 ──────────────────────────────────────────────────────────
-  _getUserInfo() {
-    wx.getUserProfile({
-      desc: '用于显示用户头像',
-      success: (res) => {
-        console.log('[userInfo] getUserProfile success:', res.userInfo)
-        this.setData({
-          userAvatarUrl: res.userInfo.avatarUrl
-        })
-      },
-      fail: (err) => {
-        console.log('[userInfo] getUserProfile fail:', err)
-        // 使用默认头像
-      }
-    })
+  // ── 加载用户头像 ──────────────────────────────────────────────────────────
+  _loadUserAvatar() {
+    const avatarUrl = wx.getStorageSync('userAvatarUrl')
+    if (avatarUrl) {
+      this.setData({ userAvatarUrl: avatarUrl })
+    }
+  },
+
+  // ── 选择头像（用户主动授权）────────────────────────────────────────────────
+  onChooseAvatar(e) {
+    const { avatarUrl } = e.detail
+    this.setData({ userAvatarUrl: avatarUrl })
+    wx.setStorageSync('userAvatarUrl', avatarUrl)
+    wx.showToast({ title: '头像已更新', icon: 'success' })
   },
 
   // ── 语音初始化 ────────────────────────────────────────────────────────────
@@ -172,8 +171,12 @@ Page({
   // ── 切换会话 ──────────────────────────────────────────────────────────────
   async onSelectSession(e) {
     const id = e.currentTarget.dataset.id
-    if (id === this.data.currentSessionId) { this.setData({ drawerOpen: false }); return }
+    if (id === this.data.currentSessionId) {
+      this.setData({ drawerOpen: false })
+      return
+    }
     this.setData({ currentSessionId: id, messages: [], drawerOpen: false })
+    // 切换会话时重新加载历史
     await this._loadHistory(id)
   },
 
@@ -527,6 +530,17 @@ Page({
     const allUrls = this.data.messages
       .flatMap(m => m.segments.filter(s => s.type === 'image').map(s => s.url))
     wx.previewImage({ current: url, urls: allUrls.length ? allUrls : [url] })
+  },
+
+  // ── 图片加载错误 ──────────────────────────────────────────────────────────
+  onImageError(e) {
+    const { url } = e.currentTarget.dataset
+    console.error('[image] load error:', url)
+    wx.showToast({
+      title: '图片加载失败，请检查网络连接',
+      icon: 'none',
+      duration: 2000
+    })
   },
 
   // ── 滚动到底部 ────────────────────────────────────────────────────────────

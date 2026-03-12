@@ -82,6 +82,20 @@
         mode="aspectFill"
       />
 
+      <!-- 用户头像（右侧） - 放在气泡前面 -->
+      <button
+        wx:if="{{item.role === 'user'}}"
+        class="avatar-btn avatar-user"
+        open-type="chooseAvatar"
+        bindchooseavatar="onChooseAvatar"
+      >
+        <image
+          class="avatar-img"
+          src="{{userAvatarUrl || '/images/user-avatar.png'}}"
+          mode="aspectFill"
+        />
+      </button>
+
       <view class="bubble {{item.role === 'user' ? 'bubble-user' : 'bubble-ai'}}">
         <view class="bubble-content">
           <block wx:for="{{item.segments}}" wx:key="index" wx:for-item="seg">
@@ -92,21 +106,14 @@
               src="{{seg.url}}"
               mode="widthFix"
               bindtap="onPreviewImage"
+              binderror="onImageError"
               data-url="{{seg.url}}"
-              lazy-load
+              show-menu-by-longpress
             />
           </block>
           <text wx:if="{{!item.done}}" class="cursor">▋</text>
         </view>
       </view>
-
-      <!-- 用户头像（右侧） -->
-      <image
-        wx:if="{{item.role === 'user'}}"
-        class="avatar avatar-user"
-        src="{{userAvatarUrl}}"
-        mode="aspectFill"
-      />
     </view>
 
     <view class="list-bottom-pad"/>

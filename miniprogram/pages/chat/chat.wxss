@@ -102,7 +102,10 @@
   align-items: flex-start;
   margin-bottom: 24rpx;
 }
-.msg-user  { flex-direction: row; justify-content: flex-end; }
+.msg-user  {
+  flex-direction: row-reverse;
+  justify-content: flex-start;
+}
 .msg-ai    { flex-direction: row; }
 
 /* ── 头像 ── */
@@ -114,6 +117,37 @@
 }
 .avatar-ai   { margin-right: 16rpx; background: #e8f5e9; }
 .avatar-user { margin-left: 16rpx; background: #e3f2fd; }
+
+/* ── 头像按钮（用于授权） ── */
+.avatar-btn {
+  width: 72rpx !important;
+  height: 72rpx !important;
+  min-width: 72rpx;
+  min-height: 72rpx;
+  max-width: 72rpx;
+  max-height: 72rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+  padding: 0 !important;
+  margin: 0;
+  border: none;
+  background: transparent;
+  overflow: hidden;
+  line-height: 72rpx;
+}
+.avatar-btn::after {
+  border: none;
+}
+.avatar-btn.avatar-user {
+  margin-right: 0;
+  margin-left: 16rpx;
+}
+.avatar-img {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  display: block;
+}
 
 /* ── 气泡 ── */
 .bubble {
@@ -127,7 +161,7 @@
 .bubble-user {
   background: #4CAF50;
   color: #fff;
-  border-top-right-radius: 4rpx;
+  border-top-left-radius: 4rpx;
 }
 .bubble-ai {
   background: #fff;

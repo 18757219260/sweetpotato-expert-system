@@ -187,8 +187,8 @@ async def upload_image_endpoint(
 
 请你作为甘薯病害专家，详细说明该病害的症状、成因和防治方法。"""
 
-                print(f"[DEBUG] Question for LLM:\n{question}\n")
-                print(f"[DEBUG] Starting to collect LLM response...")
+                # print(f"[DEBUG] Question for LLM:\n{question}\n")
+                # print(f"[DEBUG] Starting to collect LLM response...")
 
                 # 收集 LLM 响应
                 full_response = ""
@@ -198,26 +198,25 @@ async def upload_image_endpoint(
                 try:
                     async for chunk in _generate(question, user_id, db, mode, session_id_int):
                         chunk_count += 1
-                        print(f"[DEBUG] Received chunk {chunk_count}: {chunk[:100]}...")
+                        # print(f"[DEBUG] Received chunk {chunk_count}: {chunk[:100]}...")
                         if chunk.startswith("data: "):
                             json_str = chunk[6:].strip()
                             data = json.loads(json_str)
-                            print(f"[DEBUG] Chunk {chunk_count}: type={data.get('type')}, content_len={len(data.get('content', ''))}")
+                            # print(f"[DEBUG] Chunk {chunk_count}: type={data.get('type')}, content_len={len(data.get('content', ''))}")
                             if data.get("type") == "text":
                                 content = data.get("content", "")
                                 full_response += content
-                                print(f"[DEBUG] Added {len(content)} chars to response")
-                            elif data.get("type") == "done":
+                            #     print(f"[DEBUG] Added {len(content)} chars to response")
+                            # elif data.get("type") == "done":
                                 segments = data.get("segments", [])
                                 images = data.get("images", [])
-                                print(f"[DEBUG] Got done event with {len(segments)} segments and {len(images)} images")
+                                # print(f"[DEBUG] Got done event with {len(segments)} segments and {len(images)} images")
                 except Exception as e:
-                    print(f"[DEBUG] Error collecting LLM response: {e}")
+                    # print(f"[DEBUG] Error collecting LLM response: {e}")
                     import traceback
                     traceback.print_exc()
 
-                print(f"[DEBUG] Total chunks: {chunk_count}, full_response length: {len(full_response)}")
-                print(f"[DEBUG] Segments: {len(segments)}, Images: {len(images)}")
+                
 
                 return {
                     "type": "success",
@@ -249,8 +248,8 @@ async def upload_image_endpoint(
 
 虽然图片识别概率较低，但请根据图片内容描述、识别结果和用户描述，靠自己综合分析判断是否输出有关甘薯信息。"""
 
-                print(f"[DEBUG] Question for LLM:\n{question}\n")
-                print(f"[DEBUG] Starting to collect LLM response...")
+                # print(f"[DEBUG] Question for LLM:\n{question}\n")
+                # print(f"[DEBUG] Starting to collect LLM response...")
 
                 # 收集 LLM 响应
                 full_response = ""
@@ -260,26 +259,26 @@ async def upload_image_endpoint(
                 try:
                     async for chunk in _generate(question, user_id, db, mode, session_id_int):
                         chunk_count += 1
-                        print(f"[DEBUG] Received chunk {chunk_count}: {chunk[:100]}...")
+                        # print(f"[DEBUG] Received chunk {chunk_count}: {chunk[:100]}...")
                         if chunk.startswith("data: "):
                             json_str = chunk[6:].strip()
                             data = json.loads(json_str)
-                            print(f"[DEBUG] Chunk {chunk_count}: type={data.get('type')}, content_len={len(data.get('content', ''))}")
+                            # print(f"[DEBUG] Chunk {chunk_count}: type={data.get('type')}, content_len={len(data.get('content', ''))}")
                             if data.get("type") == "text":
                                 content = data.get("content", "")
                                 full_response += content
-                                print(f"[DEBUG] Added {len(content)} chars to response")
+                                # print(f"[DEBUG] Added {len(content)} chars to response")
                             elif data.get("type") == "done":
                                 segments = data.get("segments", [])
                                 images = data.get("images", [])
-                                print(f"[DEBUG] Got done event with {len(segments)} segments and {len(images)} images")
+                                # print(f"[DEBUG] Got done event with {len(segments)} segments and {len(images)} images")
                 except Exception as e:
-                    print(f"[DEBUG] Error collecting LLM response: {e}")
+                    #print(f"[DEBUG] Error collecting LLM response: {e}")
                     import traceback
                     traceback.print_exc()
 
-                print(f"[DEBUG] Total chunks: {chunk_count}, full_response length: {len(full_response)}")
-                print(f"[DEBUG] Segments: {len(segments)}, Images: {len(images)}")
+                #print(f"[DEBUG] Total chunks: {chunk_count}, full_response length: {len(full_response)}")
+                #print(f"[DEBUG] Segments: {len(segments)}, Images: {len(images)}")
 
                 return {
                     "type": "low_confidence",
