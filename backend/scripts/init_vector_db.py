@@ -1,19 +1,4 @@
-"""
-scripts/init_vector_db.py - 甘薯知识库向量化入库脚本
 
-功能：
-1. 读取 backend/data/knowledge_base.json
-2. 对每条记录进行文本分块（500字/块，50字重叠）
-3. 调用通义千问 Embedding 接口向量化
-4. 基于 chunk ID 的增量更新，避免重复调用浪费 Token
-5. 持久化存入 ChromaDB
-
-用法：
-    python scripts/init_vector_db.py           # 增量更新
-    python scripts/init_vector_db.py --reset   # 清空后重建
-"""
-
-# !! 必须在所有 import 之前打 ChromaDB SQLite 补丁 !!
 __import__('pysqlite3')
 import sys
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
@@ -38,8 +23,6 @@ CHROMA_DB_PATH = os.getenv("CHROMA_DB_PATH", "")
 KB_PATH = Path(__file__).parent.parent /"data" / "knowledge_base.json"
 COLLECTION_NAME = "sweet_potato_knowledge"
 EMBEDDING_MODEL = "text-embedding-v3"
-CHUNK_SIZE = 500      # 每块字符数
-CHUNK_OVERLAP = 50    # 块间重叠字符数
 EMBED_BATCH_SIZE = 10 # 每批调用 Embedding 数量（避免超限）
 
 # ── 通义千问 Embedding 客户端 ─────────────────────────────────────────────────
@@ -47,19 +30,6 @@ qwen_client = OpenAI(
     api_key=QWEN_API_KEY,
     base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
 )
-
-
-def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list[str]:
-    """将文本按字符数切分为重叠块"""
-    if len(text) <= chunk_size:
-        return [text]
-    chunks = []
-    start = 0
-    while start < len(text):
-        end = start + chunk_size
-        chunks.append(text[start:end])
-        start += chunk_size - overlap
-    return chunks
 
 
 def build_full_text(record: dict) -> str:
@@ -167,7 +137,7 @@ def init_vector_db(reset: bool = False):
     if collection.count() > 0:
         existing = collection.get(include=[])
         existing_ids = set(existing["ids"])
-        print(f"[增量] ChromaDB 中已有 {len(existing_ids)} 个 chunk，将跳过重复项")
+        print(f"[增量] ChromaDB 中已有 {len(existing_ids)} 个实体向量，将跳过重复项")
 
     # 4. 构建待入库的 chunk 列表
     to_embed_texts: list[str] = []
@@ -176,33 +146,29 @@ def init_vector_db(reset: bool = False):
 
     for record in records:
         full_text = build_full_text(record)
-        chunks = chunk_text(full_text)
+        entity_id = compute_chunk_id(record["id"], 0, full_text)
 
-        for idx, chunk in enumerate(chunks):
-            chunk_id = compute_chunk_id(record["id"], idx, chunk)
+        if entity_id in existing_ids:
+            continue  # 内容未变，跳过
 
-            if chunk_id in existing_ids:
-                continue  # 内容未变，跳过
-
-            to_embed_texts.append(chunk)
-            to_embed_ids.append(chunk_id)
-            to_embed_metas.append({
-                "record_id": record["id"],
-                "name": record.get("name", ""),
-                "category": record.get("category", ""),
-                "image_id": record.get("image_id", ""),
-                "chunk_index": idx,
-                "keywords": ",".join(record.get("keywords", [])),
-                "growth_stages": ",".join(record.get("growth_stages", [])),
-                "environmental_factors": ",".join(record.get("environmental_factors", [])),
-                "applicable_regions": ",".join(record.get("applicable_regions", [])),
-            })
+        to_embed_texts.append(full_text)
+        to_embed_ids.append(entity_id)
+        to_embed_metas.append({
+            "record_id": record["id"],
+            "name": record.get("name", ""),
+            "category": record.get("category", ""),
+            "image_id": record.get("image_id", ""),
+            "keywords": ",".join(record.get("keywords", [])),
+            "growth_stages": ",".join(record.get("growth_stages", [])),
+            "environmental_factors": ",".join(record.get("environmental_factors", [])),
+            "applicable_regions": ",".join(record.get("applicable_regions", [])),
+        })
 
     if not to_embed_texts:
         print("[完成] 知识库无更新，无需重新入库")
         return
 
-    print(f"[向量化] 需要处理 {len(to_embed_texts)} 个新 chunk，开始调用 Embedding API...")
+    print(f"[向量化] 需要处理 {len(to_embed_texts)} 个新实体，开始调用 Embedding API...")
 
     # 5. 批量获取 Embedding
     embeddings = get_embeddings(to_embed_texts)
@@ -215,7 +181,7 @@ def init_vector_db(reset: bool = False):
         metadatas=to_embed_metas,
     )
 
-    print(f"[完成] 成功入库 {len(to_embed_texts)} 个 chunk，ChromaDB 总计 {collection.count()} 个")
+    print(f"[完成] 成功入库 {len(to_embed_texts)} 个实体，ChromaDB 总计 {collection.count()} 个")
 
 
 def query_test(query: str, n_results: int = 3):
@@ -243,7 +209,7 @@ def query_test(query: str, n_results: int = 3):
         results["metadatas"][0],
         results["distances"][0],
     )):
-        print(f"[{i+1}] 相似度: {1 - dist:.4f} | 来源: {meta['name']} (chunk {meta['chunk_index']})")
+        print(f"[{i+1}] 相似度: {1 - dist:.4f} | 来源: {meta['name']} ({meta['category']})")
         print(f"     内容: {doc[:100]}...")
         print()
 

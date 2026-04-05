@@ -26,10 +26,19 @@ STATIC_IMAGES_DIR = os.getenv("STATIC_IMAGES_DIR", "./backend/static/images")
 # ── 应用生命周期 ──────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    import asyncio
     # 启动时初始化 SQLite 数据库（幂等）
     init_db()
     # 确保静态资源目录存在
     os.makedirs(STATIC_IMAGES_DIR, exist_ok=True)
+    # 预热 CV 模型（防止首次图片请求冷启动）
+    try:
+        from backend.services.cv_service import _load_model
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, _load_model)
+        print("[startup] CV 模型预热完成")
+    except Exception as e:
+        print(f"[startup] CV 模型预热失败（将在首次请求时加载）：{e}")
     yield
     # 关闭时（如需清理资源可在此添加）
 

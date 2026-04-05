@@ -14,11 +14,12 @@ sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 import json
 import os
 import re
+import requests
 from typing import AsyncGenerator, Optional
 import random
 import chromadb
 from dotenv import load_dotenv
-from openai import OpenAI
+from openai import AsyncOpenAI, OpenAI
 from backend.services.mcp_service import TOOLS, execute_tool, format_tool_result
 from datetime import datetime
 load_dotenv()
@@ -31,13 +32,19 @@ EMBEDDING_MODEL   = "text-embedding-v3"
 CHAT_MODEL_PRO    = "qwen3.5-plus"   # Pro 模式：查询重写 + 高精度回答
 CHAT_MODEL_FLASH  = "qwen3.5-flash"  # Flash 模式：直接检索 + 快速回答
 REWRITE_MODEL     = "qwen3.5-flash"  # 查询重写始终用轻量模型
-TOP_K             = 4                    # 每次检索返回片段数
-SIMILARITY_THRESH = 0.65                 # 余弦相似度阈值（低于则视为未命中）
+TOP_K_INITIAL     = 10                   # ChromaDB 初始召回数
+TOP_K_FINAL       = 3                    # Rerank 后最终保留数
+RERANK_MODEL      = "gte-rerank"         # DashScope Rerank 模型
+SIMILARITY_THRESH = 0.4                 # 余弦相似度阈值（Rerank 前预过滤）
 MAX_HISTORY_TURNS = 3                    # 滑动窗口保留轮数
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.abspath(os.path.join(CURRENT_DIR, "../static/images"))
 # ── 客户端初始化 ──────────────────────────────────────────────────────────────
 _qwen = OpenAI(
+    api_key=QWEN_API_KEY,
+    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+)
+_qwen_async = AsyncOpenAI(
     api_key=QWEN_API_KEY,
     base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
 )
@@ -118,7 +125,40 @@ def build_chroma_where(filters: dict) -> Optional[dict]:
     return None
 
 
-# ── 3. RAG 检索 ───────────────────────────────────────────────────────────────
+
+# ── 3. Rerank 重排 ────────────────────────────────────────────────────────────
+def rerank_results(
+    query: str,
+    docs: list[str],
+    metas: list[dict],
+) -> list[tuple[str, dict]]:
+    """
+    调用 DashScope gte-rerank 对初始召回结果重新打分，返回 TOP_K_FINAL 个最相关片段。
+    降级策略：若 API 调用失败，直接返回前 TOP_K_FINAL 个原始结果（保证可用性）。
+    """
+    n = min(TOP_K_FINAL, len(docs))
+    try:
+        resp = requests.post(
+            "https://dashscope.aliyuncs.com/api/v1/services/rerank/text-rerank/text-rerank",
+            headers={
+                "Authorization": f"Bearer {QWEN_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": RERANK_MODEL,
+                "input": {"query": query, "documents": docs},
+                "parameters": {"top_n": n, "return_documents": False},
+            },
+            timeout=5,
+        )
+        resp.raise_for_status()
+        items = resp.json()["output"]["results"]
+        return [(docs[it["index"]], metas[it["index"]]) for it in items]
+    except Exception:
+        return list(zip(docs[:n], metas[:n]))
+
+
+# ── 4. RAG 检索 ───────────────────────────────────────────────────────────────
 def retrieve_context(query_or_intent) -> tuple[str, bool]:
     """
     混合检索：先用 metadata 过滤缩小候选池，再按语义向量排序。
@@ -146,7 +186,7 @@ def retrieve_context(query_or_intent) -> tuple[str, bool]:
 
     query_params = {
         "query_embeddings": [query_embedding],
-        "n_results": min(TOP_K, collection.count()),
+        "n_results": min(TOP_K_INITIAL, collection.count()),
         "include": ["documents", "metadatas", "distances"],
     }
 
@@ -177,10 +217,17 @@ def retrieve_context(query_or_intent) -> tuple[str, bool]:
     if not filtered:
         return "", False
 
+    # Rerank：超过 TOP_K_FINAL 个候选时调用重排模型，否则直接使用
+    if len(filtered) > TOP_K_FINAL:
+        f_docs, f_metas = zip(*filtered)
+        final = rerank_results(search_query, list(f_docs), list(f_metas))
+    else:
+        final = filtered
+
     context_parts = []
-    for doc, meta in filtered:
+    for doc, meta in final:
         source = f"{meta.get('category', '')} · {meta.get('name', '')}"
-        image_id=meta.get("image_id", "")
+        image_id = meta.get("image_id", "")
         img_instruction = f" (关联图片标识: {image_id})" if image_id else ""
         context_parts.append(f"【{source}】\n{doc}{img_instruction}")
 
@@ -329,7 +376,7 @@ async def chat_stream(
     messages.append({"role": "user", "content": user_question})
 
     # Step 4: 第一次流式调用（无工具调用时文本直接流出；有工具调用时累积 delta 后执行工具再发第二次请求）
-    stream = _qwen.chat.completions.create(
+    stream = await _qwen_async.chat.completions.create(
         model=chat_model,
         messages=messages,
         tools=TOOLS,
@@ -342,7 +389,7 @@ async def chat_stream(
     raw_answer_parts: list[str] = []
     tool_calls_acc: dict = {}
 
-    for chunk in stream:
+    async for chunk in stream:
         delta = chunk.choices[0].delta
         # 累积 tool call 分片（tool call 时 delta.content 为空）
         if delta.tool_calls:
@@ -381,7 +428,7 @@ async def chat_stream(
                 "content": json.dumps(tool_result, ensure_ascii=False),
             })
         raw_answer_parts = []
-        stream2 = _qwen.chat.completions.create(
+        stream2 = await _qwen_async.chat.completions.create(
             model=chat_model,
             messages=messages,
             stream=True,
@@ -389,7 +436,7 @@ async def chat_stream(
             max_tokens=1500,
             extra_body={"enable_thinking": False},
         )
-        for chunk in stream2:
+        async for chunk in stream2:
             delta = chunk.choices[0].delta
             if delta.content:
                 raw_answer_parts.append(delta.content)
