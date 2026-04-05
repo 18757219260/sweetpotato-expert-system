@@ -198,7 +198,7 @@ _SYSTEM_TEMPLATE ="""\
 
 【回答要求】:
 1. 严格基于本地知识库片段回答，保持专业、准确、通俗易懂。
-2. 知识库中的id大小代表重要程度，越小越重要，当回答涉及多个病害、虫害、草害、品种、灾害时，优先介绍重要程度更高的（id更小的）片段内容。
+2. 当回答涉及多个病害、虫害、草害、品种或灾害时，优先详细介绍检索相关度更高的片段内容。
 3. 当检索不到相关知识片段时，明确告知用户"未在本地知识库检索到相关知识片段"，然后用自己的通用农业知识来回答问题。
 4. 如果用户的问题与甘薯无关，请礼貌拒绝并引导用户提问甘薯相关问题。
 5. 如果提供了用户农场信息，请结合当地气候、土壤特点给出针对性建议。
@@ -308,7 +308,7 @@ async def chat_stream(
        "clean_answer": "..."}                    # 结束信号，含图片列表与完整回答
     """
     import asyncio
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
 
     if mode == "flash":
         # Flash：直接用原始问题检索，跳过查询重写
@@ -328,57 +328,60 @@ async def chat_stream(
     messages.extend(trimmed_history)
     messages.append({"role": "user", "content": user_question})
 
-    # Step 4: 调用通义千问流式接口（支持 tool calling）
-    # 第一次调用：检查是否需要工具调用
-    response = _qwen.chat.completions.create(
+    # Step 4: 第一次流式调用（无工具调用时文本直接流出；有工具调用时累积 delta 后执行工具再发第二次请求）
+    stream = _qwen.chat.completions.create(
         model=chat_model,
         messages=messages,
         tools=TOOLS,
+        stream=True,
         temperature=0.7,
         max_tokens=1500,
         extra_body={"enable_thinking": False},
     )
 
-    # 检查是否有工具调用
-    tool_calls = response.choices[0].message.tool_calls
+    raw_answer_parts: list[str] = []
+    tool_calls_acc: dict = {}
 
-    if tool_calls:
-        # 有工具调用：执行工具并继续对话
-        # 将 assistant 消息转换为字典格式
-        assistant_message = {
+    for chunk in stream:
+        delta = chunk.choices[0].delta
+        # 累积 tool call 分片（tool call 时 delta.content 为空）
+        if delta.tool_calls:
+            for tc in delta.tool_calls:
+                idx = tc.index
+                if idx not in tool_calls_acc:
+                    tool_calls_acc[idx] = {"id": "", "type": "function",
+                                           "function": {"name": "", "arguments": ""}}
+                if tc.id:
+                    tool_calls_acc[idx]["id"] = tc.id
+                if tc.function and tc.function.name:
+                    tool_calls_acc[idx]["function"]["name"] = tc.function.name
+                if tc.function and tc.function.arguments:
+                    tool_calls_acc[idx]["function"]["arguments"] += tc.function.arguments
+        # 直接流出文本（无工具调用时填充 raw_answer_parts）
+        if delta.content:
+            raw_answer_parts.append(delta.content)
+            yield {"type": "text", "content": delta.content}
+
+    if tool_calls_acc:
+        # 有工具调用：执行工具，再发第二次流式请求获取最终回答
+        tool_calls = list(tool_calls_acc.values())
+        messages.append({
             "role": "assistant",
-            "content": response.choices[0].message.content or "",
-            "tool_calls": [
-                {
-                    "id": tc.id,
-                    "type": "function",
-                    "function": {
-                        "name": tc.function.name,
-                        "arguments": tc.function.arguments
-                    }
-                }
-                for tc in tool_calls
-            ]
-        }
-        messages.append(assistant_message)
-
-        for tool_call in tool_calls:
-            tool_name = tool_call.function.name
-            tool_args = json.loads(tool_call.function.arguments)
-
-            # 执行工具
+            "content": "".join(raw_answer_parts),
+            "tool_calls": tool_calls,
+        })
+        for tc in tool_calls:
+            tool_name = tc["function"]["name"]
+            tool_args = json.loads(tc["function"]["arguments"])
             tool_result = execute_tool(tool_name, tool_args)
-
-            # 添加工具调用结果到消息列表
             messages.append({
                 "role": "tool",
-                "tool_call_id": tool_call.id,
+                "tool_call_id": tc["id"],
                 "name": tool_name,
-                "content": json.dumps(tool_result, ensure_ascii=False)
+                "content": json.dumps(tool_result, ensure_ascii=False),
             })
-
-        # 第二次调用：基于工具结果生成最终回答（流式）
-        stream = _qwen.chat.completions.create(
+        raw_answer_parts = []
+        stream2 = _qwen.chat.completions.create(
             model=chat_model,
             messages=messages,
             stream=True,
@@ -386,33 +389,12 @@ async def chat_stream(
             max_tokens=1500,
             extra_body={"enable_thinking": False},
         )
-
-        raw_answer_parts: list[str] = []
-
-        for chunk in stream:
+        for chunk in stream2:
             delta = chunk.choices[0].delta
             if delta.content:
                 raw_answer_parts.append(delta.content)
                 yield {"type": "text", "content": delta.content}
-    else:
-        # 无工具调用：直接流式返回
-        # 重新调用以获取流式响应
-        stream = _qwen.chat.completions.create(
-            model=chat_model,
-            messages=messages,
-            stream=True,
-            temperature=0.7,
-            max_tokens=1500,
-            extra_body={"enable_thinking": False},
-        )
-
-        raw_answer_parts: list[str] = []
-
-        for chunk in stream:
-            delta = chunk.choices[0].delta
-            if delta.content:
-                raw_answer_parts.append(delta.content)
-                yield {"type": "text", "content": delta.content}
+    # 无工具调用：raw_answer_parts 已在第一次流中填充，直接进入 Step 5
 
     # Step 5: 提取图片标识并清理回答
     raw_answer = "".join(raw_answer_parts)

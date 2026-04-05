@@ -127,14 +127,17 @@ async def upload_image_endpoint(
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="仅支持图片文件")
 
-    # 2. 保存临时文件
+    # 2. 保存临时文件（先读取内容以便校验大小）
+    MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10MB
     file_ext = os.path.splitext(file.filename)[1] if file.filename else ".jpg"
     temp_filename = f"{uuid.uuid4()}{file_ext}"
     temp_path = UPLOAD_DIR / temp_filename
 
     try:
+        content = await file.read()
+        if len(content) > MAX_UPLOAD_SIZE:
+            raise HTTPException(status_code=413, detail="图片文件不能超过 10MB")
         with open(temp_path, "wb") as f:
-            content = await file.read()
             f.write(content)
 
         user_id = current_user.id
@@ -206,11 +209,9 @@ async def upload_image_endpoint(
                             if data.get("type") == "text":
                                 content = data.get("content", "")
                                 full_response += content
-                            #     print(f"[DEBUG] Added {len(content)} chars to response")
-                            # elif data.get("type") == "done":
+                            elif data.get("type") == "done":
                                 segments = data.get("segments", [])
                                 images = data.get("images", [])
-                                # print(f"[DEBUG] Got done event with {len(segments)} segments and {len(images)} images")
                 except Exception as e:
                     # print(f"[DEBUG] Error collecting LLM response: {e}")
                     import traceback

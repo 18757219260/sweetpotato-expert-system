@@ -147,7 +147,7 @@ Page({
   // ── 加载指定会话的历史 ────────────────────────────────────────────────────
   async _loadHistory(sessionId) {
     try {
-      const data = await fetchHistory(20, sessionId)
+      const data = await fetchHistory(50, sessionId)
       const messages = (data.messages || []).map((m, i) => ({
         id: `hist_${sessionId}_${i}`,
         role: m.role,
@@ -323,8 +323,11 @@ Page({
         }
         if (session_id && session_id !== this.data.currentSessionId) {
           const title = question.slice(0, 20)
-          const newSession = { id: session_id, title, created_at: new Date().toISOString() }
-          this.setData({ currentSessionId: session_id, sessions: [newSession, ...this.data.sessions] })
+          const already = this.data.sessions.some(s => s.id === session_id)
+          const sessions = already
+            ? this.data.sessions
+            : [{ id: session_id, title, created_at: new Date().toISOString() }, ...this.data.sessions]
+          this.setData({ currentSessionId: session_id, sessions })
         }
         this._scrollToBottom()
       },
