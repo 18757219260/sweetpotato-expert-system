@@ -58,58 +58,116 @@ def _get_collection() -> chromadb.Collection:
     return _collection
 
 
-# ── 1. 查询重写 (Query Rewrite) ───────────────────────────────────────────────
-def rewrite_query(user_question: str) -> str:
+# ── 1. 意图分析 (Query Intent Analysis) ──────────────────────────────────────
+def analyze_query_intent(user_question: str) -> dict:
     """
-    将用户口语化提问转换为专业检索关键词。
-    例："叶子发黄了怎么办" → "甘薯叶片黄化 缺氮 病毒病 症状"
+    将口语化问题升级为结构化意图 JSON：
+    {
+        "search_query": "甘薯叶片黄化 缺氮 症状",   # 用于向量检索的文本
+        "filters": {
+            "category": "病害",   # 可选，仅 category 参与过滤
+        }
+    }
     """
     prompt = (
-        "你是甘薯农业专家。用户提了一个问题，请提取其中最关键的农业专业术语和症状描述，"
-        "输出 5-8 个关键词（空格分隔），不要输出任何解释，只输出关键词。\n\n"
-        f"用户问题：{user_question}"
+        "你是甘薯农业专家。分析以下用户问题，以JSON格式输出意图分析结果。\n\n"
+        "字段说明：\n"
+        "- search_query：提取5-8个专业检索关键词（空格分隔）\n"
+        "- filters.category：仅当可明确判断时填写，值必须严格是以下之一："
+        "病害、虫害、品种资源、草害、农业灾害、农艺管理。不确定时不包含此字段。\n\n"
+        f"用户问题：{user_question}\n\n"
+        '输出格式（严格JSON）：{"search_query": "...", "filters": {}}'
     )
-    response = _qwen.chat.completions.create(
-        model=REWRITE_MODEL,
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=60,
-        temperature=0.0,
-        extra_body={"enable_thinking": False},
-    )
-    rewritten = response.choices[0].message.content.strip()
-    # 若重写结果为空或异常，回退到原始问题
-    return rewritten if rewritten else user_question
+
+    try:
+        response = _qwen.chat.completions.create(
+            model=REWRITE_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=80,
+            temperature=0.0,
+            extra_body={"enable_thinking": False},
+            response_format={"type": "json_object"},
+        )
+        raw = response.choices[0].message.content.strip()
+        result = json.loads(raw)
+
+        if "search_query" not in result or not result["search_query"]:
+            result["search_query"] = user_question
+        if "filters" not in result or not isinstance(result["filters"], dict):
+            result["filters"] = {}
+        # 只保留 category，过滤掉 LLM 可能乱填的其他字段
+        result["filters"] = {
+            k: v for k, v in result["filters"].items()
+            if k == "category" and v
+        }
+        return result
+
+    except Exception:
+        return {"search_query": user_question, "filters": {}}
 
 
-# ── 2. RAG 检索 ───────────────────────────────────────────────────────────────
-def retrieve_context(query: str) -> tuple[str, bool]:
+# ── 2. ChromaDB 过滤条件构建 ──────────────────────────────────────────────────
+def build_chroma_where(filters: dict) -> Optional[dict]:
     """
-    向量化查询并检索相关知识片段。
-    返回：(格式化上下文字符串, 是否命中)
+    将意图过滤条件转换为 ChromaDB where 语法。
+    当前只处理 category 字段（$eq 精确匹配）。
+    返回 None 表示无过滤条件。
     """
+    if filters.get("category"):
+        return {"category": {"$eq": filters["category"]}}
+    return None
+
+
+# ── 3. RAG 检索 ───────────────────────────────────────────────────────────────
+def retrieve_context(query_or_intent) -> tuple[str, bool]:
+    """
+    混合检索：先用 metadata 过滤缩小候选池，再按语义向量排序。
+    - query_or_intent 为字符串时：直接使用，不加过滤（flash 模式）
+    - query_or_intent 为字典时：使用 search_query 向量化，filters 构建 where 子句（pro 模式）
+    降级策略：若 where 过滤后零召回，自动退回无条件全量检索。
+    """
+    if isinstance(query_or_intent, dict):
+        search_query = query_or_intent.get("search_query", "")
+        filters = query_or_intent.get("filters", {})
+    else:
+        search_query = query_or_intent
+        filters = {}
+
     collection = _get_collection()
     if collection.count() == 0:
         return "", False
 
-    # 向量化查询词
     embed_resp = _qwen.embeddings.create(
         model=EMBEDDING_MODEL,
-        input=[query],
+        input=[search_query],
         encoding_format="float",
     )
     query_embedding = embed_resp.data[0].embedding
 
-    results = collection.query(
-        query_embeddings=[query_embedding],
-        n_results=min(TOP_K, collection.count()),
-        include=["documents", "metadatas", "distances"],
-    )
+    query_params = {
+        "query_embeddings": [query_embedding],
+        "n_results": min(TOP_K, collection.count()),
+        "include": ["documents", "metadatas", "distances"],
+    }
+
+    where_clause = build_chroma_where(filters) if filters else None
+    used_filter = False
+
+    if where_clause:
+        query_params["where"] = where_clause
+        used_filter = True
+
+    results = collection.query(**query_params)
+
+    # 降级：若有过滤条件但零召回，退回无过滤全量检索
+    if used_filter and not results["documents"][0]:
+        del query_params["where"]
+        results = collection.query(**query_params)
 
     docs = results["documents"][0]
     metas = results["metadatas"][0]
-    distances = results["distances"][0]  # 余弦距离，越小越相似
+    distances = results["distances"][0]
 
-    # 过滤低相似度片段
     filtered = [
         (doc, meta)
         for doc, meta, dist in zip(docs, metas, distances)
@@ -257,14 +315,9 @@ async def chat_stream(
         context, kb_hit = await loop.run_in_executor(None, retrieve_context, user_question)
         chat_model = CHAT_MODEL_FLASH
     else:
-        # Pro：查询重写与直接检索并发，取更好的结果
-        rewrite_task = loop.run_in_executor(None, rewrite_query, user_question)
-        direct_task  = loop.run_in_executor(None, retrieve_context, user_question)
-        rewritten, (context_direct, kb_hit_direct) = await asyncio.gather(rewrite_task, direct_task)
-        if kb_hit_direct:
-            context, kb_hit = context_direct, kb_hit_direct
-        else:
-            context, kb_hit = await loop.run_in_executor(None, retrieve_context, rewritten)
+        # Pro：结构化意图分析 → 混合检索（category 过滤 + 向量排序）
+        intent_data = await loop.run_in_executor(None, analyze_query_intent, user_question)
+        context, kb_hit = await loop.run_in_executor(None, retrieve_context, intent_data)
         chat_model = CHAT_MODEL_PRO
 
     # Step 3: 构建消息列表

@@ -1,10 +1,7 @@
-// miniprogram/config.js - 全局配置
-const config = {
-  // 开发阶段：填写运行后端的局域网 IP
-  // 上线后替换为 HTTPS 域名（微信要求线上必须 HTTPS）
-  API_BASE: 'http://10.42.0.1:8000',
 
-  // 静态图片服务地址（与 API_BASE 同源）
-  STATIC_BASE: 'http://10.42.0.1:8000/static/images',
+const config = {
+  API_BASE: 'http://172.17.0.1:8000',
+  STATIC_BASE: 'http://172.17.0.1:8000/static/images',
 }
+
 module.exports = config
