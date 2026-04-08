@@ -546,6 +546,12 @@ Page({
     })
   },
 
+  // ── 图片加载成功 ──────────────────────────────────────────────────────────
+  onImageLoad(e) {
+    const { url } = e.currentTarget.dataset
+    console.log('[image] load success:', url, 'size:', e.detail.width, 'x', e.detail.height)
+  },
+
   // ── 滚动到底部 ────────────────────────────────────────────────────────────
   _scrollToBottom() {
     const messages = this.data.messages

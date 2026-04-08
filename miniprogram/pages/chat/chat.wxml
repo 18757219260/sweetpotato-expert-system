@@ -104,9 +104,11 @@
               wx:elif="{{seg.type === 'image'}}"
               class="inline-img"
               src="{{seg.url}}"
-              mode="widthFix"
+              mode="aspectFit"
+              lazy-load="{{false}}"
               bindtap="onPreviewImage"
               binderror="onImageError"
+              bindload="onImageLoad"
               data-url="{{seg.url}}"
               show-menu-by-longpress
             />

@@ -186,8 +186,10 @@
 .inline-img {
   display: block;
   width: 100%;
+  min-height: 200rpx;
   border-radius: 10rpx;
   margin: 12rpx 0;
+  background: #f5f5f5;
 }
 
 /* ── 底部占位 ── */
