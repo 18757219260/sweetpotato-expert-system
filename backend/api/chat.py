@@ -107,7 +107,6 @@ async def _generate(
     images: list[str] = []
 
     try:
-        # print(f"[DEBUG _generate] About to call chat_stream with question={question[:30]}, history type={type(history)}, mode={mode}")
         async for chunk in chat_stream(question, history, mode=mode, farm_context=farm_context):
             if chunk["type"] == "text":
                 yield _sse({"type": "text", "content": chunk["content"]})
@@ -118,12 +117,12 @@ async def _generate(
 
     except Exception as exc:
         yield _sse({"type": "error", "detail": str(exc)})
-        return
-
-    # 落库：仅保存用户问题与最终回答（不含 RAG 片段）
-    db.add(Conversation(user_id=user_id, session_id=session_id, role="user",      content=question))
-    db.add(Conversation(user_id=user_id, session_id=session_id, role="assistant", content=clean_answer))
-    db.commit()
+    finally:
+        # 无论正常结束、异常还是客户端断开（CancelledError），只要有内容就落库
+        if question or clean_answer:
+            db.add(Conversation(user_id=user_id, session_id=session_id, role="user",      content=question))
+            db.add(Conversation(user_id=user_id, session_id=session_id, role="assistant", content=clean_answer))
+            db.commit()
 
 
 @router.post("/stream")

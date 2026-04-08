@@ -17,6 +17,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from backend.api.deps import rate_limit_key
 from backend.api import auth, chat, history, sessions, voice, upload, farm
 from backend.database import init_db
+from backend.services.llm_service import init_chroma
 
 load_dotenv()
 
@@ -31,6 +32,8 @@ async def lifespan(app: FastAPI):
     init_db()
     # 确保静态资源目录存在
     os.makedirs(STATIC_IMAGES_DIR, exist_ok=True)
+    # 提前初始化 ChromaDB，避免并发首请求时的文件锁竞争
+    init_chroma()
     # 预热 CV 模型（防止首次图片请求冷启动）
     try:
         from backend.services.cv_service import _load_model

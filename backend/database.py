@@ -7,7 +7,7 @@ database.py - SQLAlchemy 数据库初始化与模型定义
 - farm_profiles: 农场档案（供 Phase 5 使用）
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import (
     create_engine, Column, String, Integer,
     DateTime, Text, Float, ForeignKey
@@ -39,8 +39,8 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     openid = Column(String(64), unique=True, index=True, nullable=False)
     nickname = Column(String(64), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    last_active = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    last_active = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     conversations = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")
     farm_profile = relationship("FarmProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
@@ -54,7 +54,7 @@ class ChatSession(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     title = Column(String(100), nullable=False, default="新对话")
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     user = relationship("User", back_populates="sessions")
     conversations = relationship("Conversation", back_populates="session", cascade="all, delete-orphan")
@@ -69,7 +69,7 @@ class Conversation(Base):
     session_id = Column(Integer, ForeignKey("chat_sessions.id"), nullable=True)
     role = Column(String(16), nullable=False)   # "user" | "assistant"
     content = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     user = relationship("User", back_populates="conversations")
     session = relationship("ChatSession", back_populates="conversations")
@@ -87,7 +87,7 @@ class FarmProfile(Base):
     area_mu = Column(Float, nullable=True)           # 种植面积（亩）
     soil_type = Column(String(64), nullable=True)    # 土壤类型
     other_info = Column(Text, nullable=True)         # 其他信息
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     user = relationship("User", back_populates="farm_profile")
 

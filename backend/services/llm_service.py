@@ -1,12 +1,4 @@
-"""
-services/llm_service.py - RAG 与核心大模型服务
 
-功能：
-1. Query Rewrite：将口语化提问提炼为专业术语，提升 ChromaDB 命中率
-2. RAG 检索：向量化查询 + 相似度过滤
-3. 核心流式对话：结合 RAG 片段 + 兜底 Prompt + 图片触发 JSON 提取
-4. 对话历史滑动窗口（保留最近 3 轮）
-"""
 __import__('pysqlite3')
 import sys
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
@@ -21,7 +13,7 @@ import chromadb
 from dotenv import load_dotenv
 from openai import AsyncOpenAI, OpenAI
 from backend.services.mcp_service import TOOLS, execute_tool, format_tool_result
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 load_dotenv()
 
 # ── 配置 ─────────────────────────────────────────────────────────────────────
@@ -54,7 +46,7 @@ _collection: Optional[chromadb.Collection] = None
 
 
 def _get_collection() -> chromadb.Collection:
-    """懒加载 ChromaDB 集合（FastAPI 启动后首次调用时初始化）"""
+    """获取 ChromaDB 集合（由 lifespan 预初始化，此处仅作保底懒加载）"""
     global _chroma_client, _collection
     if _collection is None:
         _chroma_client = chromadb.PersistentClient(path=CHROMA_DB_PATH)
@@ -63,6 +55,11 @@ def _get_collection() -> chromadb.Collection:
             metadata={"hnsw:space": "cosine"},
         )
     return _collection
+
+
+def init_chroma():
+    """在 FastAPI lifespan 中调用，提前初始化 ChromaDB 避免并发竞争"""
+    _get_collection()
 
 
 # ── 1. 意图分析 (Query Intent Analysis) ──────────────────────────────────────
@@ -262,7 +259,7 @@ def build_system_prompt(context: str, farm_context: str = None) -> str:
     farm_info = ""
     if farm_context:
         farm_info = f"【{farm_context}】"
-    real_current_date = datetime.now().strftime("%Y年%m月%d日")
+    real_current_date = datetime.now(timezone(timedelta(hours=8))).strftime("%Y年%m月%d日")
     return _SYSTEM_TEMPLATE.format(current_date=real_current_date,
         context=context if context else "（本次查询未检索到相关知识片段）",
         farm_info=farm_info

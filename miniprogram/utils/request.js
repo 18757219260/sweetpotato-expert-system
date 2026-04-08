@@ -48,6 +48,17 @@ async function streamChat({ question, mode = 'pro', sessionId = null, onText, on
   let buffer = ''
   let pendingBytes = []
 
+  function flushBuffer() {
+    if (!buffer.trim()) return
+    const events = parseSSEChunk(buffer)
+    buffer = ''
+    for (const event of events) {
+      if (event.type === 'text') onText && onText(event.content)
+      else if (event.type === 'done') onDone && onDone({ images: event.images || [], segments: event.segments || [], cleanAnswer: event.clean_answer || '' })
+      else if (event.type === 'error') onError && onError(event.detail || '服务器错误')
+    }
+  }
+
   // 1. 发起请求并保存 task 对象
   const task = wx.request({
     url: `${API_BASE}/api/chat/stream`,
@@ -60,6 +71,8 @@ async function streamChat({ question, mode = 'pro', sessionId = null, onText, on
     data: JSON.stringify({ question, mode, session_id: sessionId }),
 
     success(res) {
+      // 真机流式结束时，冲刷 onChunkReceived 未处理完的残留帧
+      flushBuffer()
       // 兜底：开发者工具不支持 enableChunked，完整响应会在 success.data 里一次性返回
       // 真机上 onChunkReceived 已处理，这里只处理 onChunkReceived 未触发的情况
       if (res.statusCode === 200 && res.data && typeof res.data === 'string' && res.data.length > 0) {
@@ -88,6 +101,7 @@ async function streamChat({ question, mode = 'pro', sessionId = null, onText, on
     },
 
     fail(err) {
+      flushBuffer()
       onError && onError('网络连接失败，请检查网络后重试')
       console.error('[streamChat] fail', err)
     },
