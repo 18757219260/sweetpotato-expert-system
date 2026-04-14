@@ -21,14 +21,14 @@ QWEN_API_KEY   = os.getenv("QWEN_API_KEY")
 CHROMA_DB_PATH = os.getenv("CHROMA_DB_PATH", "./backend/data/chroma_db")
 COLLECTION_NAME   = "sweet_potato_knowledge"
 EMBEDDING_MODEL   = "text-embedding-v3"
-CHAT_MODEL_PRO    = "qwen3.5-plus"   # Pro 模式：查询重写 + 高精度回答
-CHAT_MODEL_FLASH  = "qwen3.5-flash"  # Flash 模式：直接检索 + 快速回答
-REWRITE_MODEL     = "qwen3.5-flash"  # 查询重写始终用轻量模型
-TOP_K_INITIAL     = 10                   # ChromaDB 初始召回数
+CHAT_MODEL_PRO    = "qwen3.5-plus"   # 查询重写 + 高精度回答
+CHAT_MODEL_FLASH  = "qwen3.5-flash"  # 直接检索快速回答
+REWRITE_MODEL     = "qwen3.5-flash"  # 查询重写模型
+TOP_K_INITIAL     = 10                   # ChromaDB 召回数
 TOP_K_FINAL       = 3                    # Rerank 后最终保留数
 RERANK_MODEL      = "gte-rerank"         # DashScope Rerank 模型
 SIMILARITY_THRESH = 0.4                 # 余弦相似度阈值（Rerank 前预过滤）
-MAX_HISTORY_TURNS = 3                    # 滑动窗口保留轮数
+MAX_HISTORY_TURNS = 5                    # 滑动窗口保留轮数
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.abspath(os.path.join(CURRENT_DIR, "../static/images"))
 # ── 客户端初始化 ──────────────────────────────────────────────────────────────
@@ -46,7 +46,6 @@ _collection: Optional[chromadb.Collection] = None
 
 
 def _get_collection() -> chromadb.Collection:
-    """获取 ChromaDB 集合（由 lifespan 预初始化，此处仅作保底懒加载）"""
     global _chroma_client, _collection
     if _collection is None:
         _chroma_client = chromadb.PersistentClient(path=CHROMA_DB_PATH)
@@ -58,21 +57,13 @@ def _get_collection() -> chromadb.Collection:
 
 
 def init_chroma():
-    """在 FastAPI lifespan 中调用，提前初始化 ChromaDB 避免并发竞争"""
+
     _get_collection()
 
 
-# ── 1. 意图分析 (Query Intent Analysis) ──────────────────────────────────────
+
 def analyze_query_intent(user_question: str) -> dict:
-    """
-    将口语化问题升级为结构化意图 JSON：
-    {
-        "search_query": "甘薯叶片黄化 缺氮 症状",   # 用于向量检索的文本
-        "filters": {
-            "category": "病害",   # 可选，仅 category 参与过滤
-        }
-    }
-    """
+  
     prompt = (
         "你是甘薯农业专家。分析以下用户问题，以JSON格式输出意图分析结果。\n\n"
         "字段说明：\n"
@@ -99,7 +90,7 @@ def analyze_query_intent(user_question: str) -> dict:
             result["search_query"] = user_question
         if "filters" not in result or not isinstance(result["filters"], dict):
             result["filters"] = {}
-        # 只保留 category，过滤掉 LLM 可能乱填的其他字段
+
         result["filters"] = {
             k: v for k, v in result["filters"].items()
             if k == "category" and v
@@ -110,29 +101,20 @@ def analyze_query_intent(user_question: str) -> dict:
         return {"search_query": user_question, "filters": {}}
 
 
-# ── 2. ChromaDB 过滤条件构建 ──────────────────────────────────────────────────
+
 def build_chroma_where(filters: dict) -> Optional[dict]:
-    """
-    将意图过滤条件转换为 ChromaDB where 语法。
-    当前只处理 category 字段（$eq 精确匹配）。
-    返回 None 表示无过滤条件。
-    """
+
     if filters.get("category"):
         return {"category": {"$eq": filters["category"]}}
     return None
 
 
-
-# ── 3. Rerank 重排 ────────────────────────────────────────────────────────────
 def rerank_results(
     query: str,
     docs: list[str],
     metas: list[dict],
 ) -> list[tuple[str, dict]]:
-    """
-    调用 DashScope gte-rerank 对初始召回结果重新打分，返回 TOP_K_FINAL 个最相关片段。
-    降级策略：若 API 调用失败，直接返回前 TOP_K_FINAL 个原始结果（保证可用性）。
-    """
+   
     n = min(TOP_K_FINAL, len(docs))
     try:
         resp = requests.post(
@@ -155,14 +137,8 @@ def rerank_results(
         return list(zip(docs[:n], metas[:n]))
 
 
-# ── 4. RAG 检索 ───────────────────────────────────────────────────────────────
 def retrieve_context(query_or_intent) -> tuple[str, bool]:
-    """
-    混合检索：先用 metadata 过滤缩小候选池，再按语义向量排序。
-    - query_or_intent 为字符串时：直接使用，不加过滤（flash 模式）
-    - query_or_intent 为字典时：使用 search_query 向量化，filters 构建 where 子句（pro 模式）
-    降级策略：若 where 过滤后零召回，自动退回无条件全量检索。
-    """
+
     if isinstance(query_or_intent, dict):
         search_query = query_or_intent.get("search_query", "")
         filters = query_or_intent.get("filters", {})
@@ -196,7 +172,6 @@ def retrieve_context(query_or_intent) -> tuple[str, bool]:
 
     results = collection.query(**query_params)
 
-    # 降级：若有过滤条件但零召回，退回无过滤全量检索
     if used_filter and not results["documents"][0]:
         del query_params["where"]
         results = collection.query(**query_params)
@@ -214,7 +189,6 @@ def retrieve_context(query_or_intent) -> tuple[str, bool]:
     if not filtered:
         return "", False
 
-    # Rerank：超过 TOP_K_FINAL 个候选时调用重排模型，否则直接使用
     if len(filtered) > TOP_K_FINAL:
         f_docs, f_metas = zip(*filtered)
         final = rerank_results(search_query, list(f_docs), list(f_metas))
@@ -268,16 +242,13 @@ def build_system_prompt(context: str, farm_context: str = None) -> str:
 
 # ── 4. 对话历史滑动窗口 ───────────────────────────────────────────────────────
 def trim_history(history: list[dict]) -> list[dict]:
-    """
-    仅保留最近 MAX_HISTORY_TURNS 轮对话（1轮 = 1 user + 1 assistant）。
-    严禁将往期 RAG 片段带入历史，history 中只存用户问题与大模型最终回答。
-    """
-    # 每轮 2 条消息（user + assistant）
+ 
+
     max_messages = MAX_HISTORY_TURNS * 2
     return history[-max_messages:] if len(history) > max_messages else history
 
 
-# ── 5. 从大模型回答中提取图片标记 ───────────────────────────────────────────
+
 _IMAGE_TAG_RE = re.compile(r'\[图片:(\w+)\]')
 
 
@@ -332,39 +303,28 @@ def extract_images_and_clean(raw_answer: str) -> tuple[str, list[str]]:
 
     return clean_answer, images, segments
 
-# ── 6. 核心流式对话（主入口） ─────────────────────────────────────────────────
+
 async def chat_stream(
     user_question: str,
     history: list[dict],
-    mode: str = "pro",   # "pro" = 查询重写+plus | "flash" = 直接检索+flash
-    farm_context: str = None,  # 用户农场信息
+    mode: str = "pro",  
+    farm_context: str = None,  
 ) -> AsyncGenerator[dict, None]:
-    """
-    核心问答流式生成器。
-
-    mode="pro"  : 查询重写（flash）→ 精准检索 → qwen3.5-plus 回答（准确率优先）
-    mode="flash": 直接检索 → qwen3.5-flash 回答（速度优先）
-    farm_context: 用户农场档案信息（可选）
-
-    每次 yield 一个 dict：
-      {"type": "text",   "content": "..."}      # 文本增量片段
-      {"type": "done",   "images": [...],
-       "clean_answer": "..."}                    # 结束信号，含图片列表与完整回答
-    """
+    
     import asyncio
     loop = asyncio.get_running_loop()
 
     if mode == "flash":
-        # Flash：直接用原始问题检索，跳过查询重写
+      
         context, kb_hit = await loop.run_in_executor(None, retrieve_context, user_question)
         chat_model = CHAT_MODEL_FLASH
     else:
-        # Pro：结构化意图分析 → 混合检索（category 过滤 + 向量排序）
+    
         intent_data = await loop.run_in_executor(None, analyze_query_intent, user_question)
         context, kb_hit = await loop.run_in_executor(None, retrieve_context, intent_data)
         chat_model = CHAT_MODEL_PRO
 
-    # Step 3: 构建消息列表
+
     system_prompt = build_system_prompt(context, farm_context)
     trimmed_history = trim_history(history)
 
@@ -372,7 +332,7 @@ async def chat_stream(
     messages.extend(trimmed_history)
     messages.append({"role": "user", "content": user_question})
 
-    # Step 4: 第一次流式调用（无工具调用时文本直接流出；有工具调用时累积 delta 后执行工具再发第二次请求）
+    
     stream = await _qwen_async.chat.completions.create(
         model=chat_model,
         messages=messages,
@@ -388,7 +348,7 @@ async def chat_stream(
 
     async for chunk in stream:
         delta = chunk.choices[0].delta
-        # 累积 tool call 分片（tool call 时 delta.content 为空）
+ 
         if delta.tool_calls:
             for tc in delta.tool_calls:
                 idx = tc.index
@@ -401,13 +361,13 @@ async def chat_stream(
                     tool_calls_acc[idx]["function"]["name"] = tc.function.name
                 if tc.function and tc.function.arguments:
                     tool_calls_acc[idx]["function"]["arguments"] += tc.function.arguments
-        # 直接流出文本（无工具调用时填充 raw_answer_parts）
+    
         if delta.content:
             raw_answer_parts.append(delta.content)
             yield {"type": "text", "content": delta.content}
 
     if tool_calls_acc:
-        # 有工具调用：执行工具，再发第二次流式请求获取最终回答
+       
         tool_calls = list(tool_calls_acc.values())
         messages.append({
             "role": "assistant",
@@ -438,9 +398,7 @@ async def chat_stream(
             if delta.content:
                 raw_answer_parts.append(delta.content)
                 yield {"type": "text", "content": delta.content}
-    # 无工具调用：raw_answer_parts 已在第一次流中填充，直接进入 Step 5
 
-    # Step 5: 提取图片标识并清理回答
     raw_answer = "".join(raw_answer_parts)
     clean_answer, images, segments = extract_images_and_clean(raw_answer)
 

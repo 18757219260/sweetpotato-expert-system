@@ -1,4 +1,4 @@
-# !! 必须在所有 import 之前打 ChromaDB SQLite 补丁 !!
+
 __import__('pysqlite3')
 import sys
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
@@ -24,17 +24,17 @@ load_dotenv()
 STATIC_IMAGES_DIR = os.getenv("STATIC_IMAGES_DIR", "./backend/static/images")
 
 
-# ── 应用生命周期 ──────────────────────────────────────────────────────────────
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     import asyncio
-    # 启动时初始化 SQLite 数据库（幂等）
+
     init_db()
-    # 确保静态资源目录存在
+
     os.makedirs(STATIC_IMAGES_DIR, exist_ok=True)
-    # 提前初始化 ChromaDB，避免并发首请求时的文件锁竞争
+
     init_chroma()
-    # 预热 CV 模型（防止首次图片请求冷启动）
+
     try:
         from backend.services.cv_service import _load_model
         loop = asyncio.get_running_loop()
@@ -43,13 +43,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"[startup] CV 模型预热失败（将在首次请求时加载）：{e}")
     yield
-    # 关闭时（如需清理资源可在此添加）
+   
 
 
-# ── 限流器 ────────────────────────────────────────────────────────────────────
+
 limiter = Limiter(key_func=rate_limit_key, default_limits=[])
 
-# ── FastAPI 应用 ──────────────────────────────────────────────────────────────
+
 app = FastAPI(
     title="甘薯专家系统",
     version="1.0.0",
@@ -57,28 +57,28 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# 将 limiter 挂到 app state，供 slowapi 中间件读取
+
 app.state.limiter = limiter
 
-# ── 中间件 ────────────────────────────────────────────────────────────────────
+
 app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # 生产环境改为实际域名
+    allow_origins=["*"],   
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ── 限流超限错误处理 ──────────────────────────────────────────────────────────
+
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
     return JSONResponse(
         status_code=429,
-        content={"detail": f"请求过于频繁，每日最多提问 {os.getenv('RATE_LIMIT_PER_DAY', '20')} 次，请明天再试。"},
+        content={"detail": f"请求过于频繁，每日最多提问 {os.getenv('RATE_LIMIT_PER_DAY', '100')} 次，请明天再试。"},
     )
 
-# ── 路由注册 ──────────────────────────────────────────────────────────────────
+
 app.include_router(auth.router)
 app.include_router(chat.router)
 app.include_router(history.router)
@@ -87,14 +87,13 @@ app.include_router(voice.router)
 app.include_router(upload.router)
 app.include_router(farm.router)
 
-# ── 静态资源（病害图片）────────────────────────────────────────────────────────
+
 app.mount(
     "/static/images",
     StaticFiles(directory=STATIC_IMAGES_DIR),
     name="images",
 )
 
-# ── 健康检查 ──────────────────────────────────────────────────────────────────
 @app.get("/health", tags=["system"])
 def health():
     return {"status": "ok", "service": "甘薯病害专家系统"}

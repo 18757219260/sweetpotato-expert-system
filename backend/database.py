@@ -1,11 +1,3 @@
-"""
-database.py - SQLAlchemy 数据库初始化与模型定义
-
-包含表：
-- users: 微信用户信息
-- conversations: 对话历史记录
-- farm_profiles: 农场档案（供 Phase 5 使用）
-"""
 
 from datetime import datetime, timezone
 from sqlalchemy import (
@@ -20,7 +12,6 @@ load_dotenv()
 
 SQLITE_DB_PATH = os.getenv("SQLITE_DB_PATH", "./backend/data/app.db")
 
-# 确保目录存在
 os.makedirs(os.path.dirname(os.path.abspath(SQLITE_DB_PATH)), exist_ok=True)
 
 engine = create_engine(
@@ -32,7 +23,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
-# ── 用户表 ──────────────────────────────────────────────────────────────────
+
 class User(Base):
     __tablename__ = "users"
 
@@ -47,7 +38,7 @@ class User(Base):
     sessions = relationship("ChatSession", back_populates="user", cascade="all, delete-orphan")
 
 
-# ── 会话表 ────────────────────────────────────────────────────────────────────
+
 class ChatSession(Base):
     __tablename__ = "chat_sessions"
 
@@ -60,7 +51,7 @@ class ChatSession(Base):
     conversations = relationship("Conversation", back_populates="session", cascade="all, delete-orphan")
 
 
-# ── 对话历史表 ────────────────────────────────────────────────────────────────
+
 class Conversation(Base):
     __tablename__ = "conversations"
 
@@ -75,30 +66,29 @@ class Conversation(Base):
     session = relationship("ChatSession", back_populates="conversations")
 
 
-# ── 农场档案表 ────────────────────────────────────────────────────────────────
 class FarmProfile(Base):
     __tablename__ = "farm_profiles"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
-    province = Column(String(32), nullable=True)     # 省
-    city = Column(String(32), nullable=True)         # 市
-    district = Column(String(32), nullable=True)     # 区
-    area_mu = Column(Float, nullable=True)           # 种植面积（亩）
-    soil_type = Column(String(64), nullable=True)    # 土壤类型
-    other_info = Column(Text, nullable=True)         # 其他信息
+    province = Column(String(32), nullable=True)    
+    city = Column(String(32), nullable=True)        
+    district = Column(String(32), nullable=True)     #
+    area_mu = Column(Float, nullable=True)          
+    soil_type = Column(String(64), nullable=True)
+    other_info = Column(Text, nullable=True)         
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     user = relationship("User", back_populates="farm_profile")
 
 
 def init_db():
-    """初始化数据库，创建所有表（幂等操作）"""
+ 
     Base.metadata.create_all(bind=engine)
 
 
 def get_db():
-    """FastAPI 依赖注入：获取数据库 Session"""
+   
     db = SessionLocal()
     try:
         yield db

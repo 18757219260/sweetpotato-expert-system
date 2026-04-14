@@ -82,7 +82,7 @@
         mode="aspectFill"
       />
 
-      <!-- 用户头像（右侧） - 放在气泡前面 -->
+      <!-- 用户头像（右侧） -->
       <button
         wx:if="{{item.role === 'user'}}"
         class="avatar-btn avatar-user"

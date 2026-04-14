@@ -1,4 +1,4 @@
-// miniprogram/app.js
+
 const { API_BASE } = require('./config')
 
 App({
@@ -8,17 +8,14 @@ App({
   },
 
   onLaunch() {
-    // 从本地存储恢复 Token
+
     const token = wx.getStorageSync('token')
     if (token) {
       this.globalData.token = token
     }
   },
 
-  /**
-   * 微信登录闭环：wx.login() → /api/login → 存储 JWT
-   * 返回 Promise<token>
-   */
+ 
   login() {
     return new Promise((resolve, reject) => {
       wx.login({
@@ -46,7 +43,7 @@ App({
     })
   },
 
-  /** 清除登录态 */
+
   logout() {
     this.globalData.token = ''
     wx.removeStorageSync('token')

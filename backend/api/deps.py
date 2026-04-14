@@ -1,12 +1,3 @@
-"""
-backend/api/deps.py - FastAPI 共享依赖
-
-包含：
-- JWT Token 解析与身份验证
-- 数据库 Session 注入
-- 限流所用的 openid key 函数
-"""
-
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -68,7 +59,7 @@ def get_current_user(
     user = db.query(User).filter(User.openid == openid).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在")
-    # 更新最后活跃时间
+ 
     user.last_active = datetime.utcnow()
     db.commit()
     return user

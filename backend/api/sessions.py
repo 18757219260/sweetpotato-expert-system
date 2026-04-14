@@ -1,10 +1,3 @@
-"""
-backend/api/sessions.py - 多会话管理接口
-
-GET    /api/sessions              - 获取当前用户所有会话
-POST   /api/sessions              - 新建会话
-DELETE /api/sessions/{session_id} - 删除会话及其所有对话
-"""
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel

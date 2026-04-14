@@ -1,9 +1,3 @@
-"""
-backend/api/farm.py - 农场档案管理
-
-GET  /api/farm/profile - 获取当前用户的农场档案
-POST /api/farm/profile - 创建或更新农场档案
-"""
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel

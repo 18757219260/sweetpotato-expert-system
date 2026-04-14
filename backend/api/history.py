@@ -1,9 +1,3 @@
-"""
-backend/api/history.py - 对话历史路由
-
-GET  /api/history       - 拉取当前用户历史记录
-POST /api/history/clear - 清空当前用户所有对话记忆
-"""
 
 from typing import Optional
 
@@ -42,10 +36,7 @@ def get_history(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """
-    拉取当前登录用户的对话历史（按时间正序，默认最近 20 条）。
-    可通过 session_id 过滤特定会话。
-    """
+ 
     q = db.query(Conversation).filter(Conversation.user_id == current_user.id)
     if session_id is not None:
         q = q.filter(Conversation.session_id == session_id)
@@ -67,9 +58,6 @@ def clear_history(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """
-    清空当前用户的对话记忆。若传 session_id 则只清空该会话。
-    """
     q = db.query(Conversation).filter(Conversation.user_id == current_user.id)
     if session_id is not None:
         q = q.filter(Conversation.session_id == session_id)

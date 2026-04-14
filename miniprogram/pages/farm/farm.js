@@ -1,10 +1,10 @@
-// miniprogram/pages/farm/farm.js - 农场档案页面
+
 const { API_BASE } = require('../../config')
 const { getProvinces, getCities, getDistricts } = require('../../utils/regions')
 
 Page({
   data: {
-    // 省市区选择器
+
     provinces: [],
     cities: [],
     districts: [],
@@ -12,15 +12,14 @@ Page({
     cityIndex: 0,
     districtIndex: 0,
 
-    // 土壤类型选择器
+
     soilTypes: ['沙土', '壤土', '黏土', '沙壤土', '黏壤土', '其他'],
     soilTypeIndex: 0,
 
-    // 表单数据
     area_mu: '',
     other_info: '',
 
-    // 加载状态
+
     loading: false,
     hasProfile: false
   },
@@ -32,7 +31,7 @@ Page({
     this._loadProfile()
   },
 
-  // ── 加载已有档案 ────────────────────────────────────────────────────────────
+  
   _loadProfile() {
     const token = wx.getStorageSync('token')
     if (!token) {
@@ -67,7 +66,7 @@ Page({
             other_info: profile.other_info || ''
           })
         } else if (res.statusCode === 404) {
-          // 没有档案，初始化默认值
+          
           const cities = getCities(this.data.provinces[0])
           const districts = getDistricts(cities[0])
           this.setData({ cities, districts })
@@ -79,7 +78,7 @@ Page({
     })
   },
 
-  // ── 省份选择 ────────────────────────────────────────────────────────────────
+  
   onProvinceChange(e) {
     const provinceIndex = parseInt(e.detail.value)
     const province = this.data.provinces[provinceIndex]
@@ -95,7 +94,7 @@ Page({
     })
   },
 
-  // ── 城市选择 ────────────────────────────────────────────────────────────────
+  
   onCityChange(e) {
     const cityIndex = parseInt(e.detail.value)
     const city = this.data.cities[cityIndex]
@@ -108,35 +107,35 @@ Page({
     })
   },
 
-  // ── 区县选择 ────────────────────────────────────────────────────────────────
+  
   onDistrictChange(e) {
     this.setData({
       districtIndex: parseInt(e.detail.value)
     })
   },
 
-  // ── 土壤类型选择 ────────────────────────────────────────────────────────────
+ 
   onSoilTypeChange(e) {
     this.setData({
       soilTypeIndex: parseInt(e.detail.value)
     })
   },
 
-  // ── 种植面积输入 ────────────────────────────────────────────────────────────
+ 
   onAreaInput(e) {
     this.setData({
       area_mu: e.detail.value
     })
   },
 
-  // ── 其他信息输入 ────────────────────────────────────────────────────────────
+ 
   onOtherInfoInput(e) {
     this.setData({
       other_info: e.detail.value
     })
   },
 
-  // ── 保存档案 ────────────────────────────────────────────────────────────────
+  
   onSave() {
     const { provinces, cities, districts, provinceIndex, cityIndex, districtIndex, soilTypes, soilTypeIndex, area_mu, other_info } = this.data
 

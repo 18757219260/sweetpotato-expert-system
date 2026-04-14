@@ -13,7 +13,7 @@ from typing import Optional
 
 import chromadb
 from dotenv import load_dotenv
-from openai import OpenAI  # 通义千问兼容 OpenAI SDK
+from openai import OpenAI  
 
 load_dotenv()
 
@@ -23,7 +23,7 @@ CHROMA_DB_PATH = os.getenv("CHROMA_DB_PATH", "")
 KB_PATH = Path(__file__).parent.parent /"data" / "knowledge_base.json"
 COLLECTION_NAME = "sweet_potato_knowledge"
 EMBEDDING_MODEL = "text-embedding-v3"
-EMBED_BATCH_SIZE = 10 # 每批调用 Embedding 数量（避免超限）
+EMBED_BATCH_SIZE = 10 
 
 # ── 通义千问 Embedding 客户端 ─────────────────────────────────────────────────
 qwen_client = OpenAI(
@@ -33,17 +33,13 @@ qwen_client = OpenAI(
 
 
 def build_full_text(record: dict) -> str:
-    """将知识库记录各字段拼接为完整文本，供向量化使用"""
     parts = [
         f"名称：{record.get('name', '')}",
         f"类别：{record.get('category', '')}",
     ]
-
-    # 处理别名（新字段）
     if record.get("aliases"):
         parts.append(f"别名：{'、'.join(record['aliases'])}")
 
-    # 处理嵌套症状对象
     symptoms = record.get("symptoms", {})
     if isinstance(symptoms, dict):
         if symptoms.get("description"):
@@ -53,23 +49,21 @@ def build_full_text(record: dict) -> str:
     elif isinstance(symptoms, str):  # 向后兼容
         parts.append(f"症状：{symptoms}")
 
-    # 处理原因
     if record.get("causes"):
         parts.append(f"原因：{record['causes']}")
 
-    # 处理嵌套防治措施对象
     control = record.get("control_measures", {})
     if isinstance(control, dict):
         if control.get("preventive"):
             parts.append(f"预防措施：{'；'.join(control['preventive'])}")
         if control.get("chemical"):
             parts.append(f"化学防治：{'；'.join(control['chemical'])}")
-    elif record.get("treatment"):  # 向后兼容
+    elif record.get("treatment"): 
         parts.append(f"防治方法：{record['treatment']}")
-    elif record.get("prevention"):  # 向后兼容
+    elif record.get("prevention"): 
         parts.append(f"预防措施：{record['prevention']}")
 
-    # 处理新增数组字段
+
     if record.get("growth_stages"):
         parts.append(f"生育期：{'、'.join(record['growth_stages'])}")
     if record.get("environmental_factors"):
@@ -79,21 +73,19 @@ def build_full_text(record: dict) -> str:
     if record.get("soil_types"):
         parts.append(f"土壤类型：{'、'.join(record['soil_types'])}")
 
-    # 处理关键词
-    if record.get("keywords"):
-        parts.append(f"关键词：{'、'.join(record['keywords'])}")
+  
 
     return "\n".join(parts)
 
 
 def compute_chunk_id(record_id: str, chunk_index: int, chunk_text: str) -> str:
-    """基于内容哈希生成 chunk ID，实现增量更新检测"""
+
     content = f"{record_id}_{chunk_index}_{chunk_text}"
     return hashlib.md5(content.encode("utf-8")).hexdigest()
 
 
 def get_embeddings(texts: list[str]) -> list[list[float]]:
-    """批量调用通义千问 Embedding 接口"""
+
     all_embeddings = []
     for i in range(0, len(texts), EMBED_BATCH_SIZE):
         batch = texts[i: i + EMBED_BATCH_SIZE]
@@ -105,13 +97,13 @@ def get_embeddings(texts: list[str]) -> list[list[float]]:
         batch_embeddings = [item.embedding for item in response.data]
         all_embeddings.extend(batch_embeddings)
         if i + EMBED_BATCH_SIZE < len(texts):
-            time.sleep(0.5)  # 避免触发 QPS 限制
+            time.sleep(0.5)  
     return all_embeddings
 
 
 def init_vector_db(reset: bool = False):
     """主入库流程"""
-    # 1. 初始化 ChromaDB
+
     os.makedirs(CHROMA_DB_PATH, exist_ok=True)
     chroma_client = chromadb.PersistentClient(path=CHROMA_DB_PATH)
 
@@ -124,22 +116,21 @@ def init_vector_db(reset: bool = False):
 
     collection = chroma_client.get_or_create_collection(
         name=COLLECTION_NAME,
-        metadata={"hnsw:space": "cosine"},  # 使用余弦相似度
+        metadata={"hnsw:space": "cosine"}, 
     )
 
-    # 2. 读取知识库
+
     with open(KB_PATH, "r", encoding="utf-8") as f:
         records = json.load(f)
     print(f"[加载] 读取知识库记录 {len(records)} 条")
 
-    # 3. 获取已存在的 chunk ID（用于增量跳过）
+
     existing_ids: set[str] = set()
     if collection.count() > 0:
         existing = collection.get(include=[])
         existing_ids = set(existing["ids"])
         print(f"[增量] ChromaDB 中已有 {len(existing_ids)} 个实体向量，将跳过重复项")
 
-    # 4. 构建待入库的 chunk 列表
     to_embed_texts: list[str] = []
     to_embed_ids: list[str] = []
     to_embed_metas: list[dict] = []
@@ -149,7 +140,7 @@ def init_vector_db(reset: bool = False):
         entity_id = compute_chunk_id(record["id"], 0, full_text)
 
         if entity_id in existing_ids:
-            continue  # 内容未变，跳过
+            continue 
 
         to_embed_texts.append(full_text)
         to_embed_ids.append(entity_id)
@@ -170,10 +161,9 @@ def init_vector_db(reset: bool = False):
 
     print(f"[向量化] 需要处理 {len(to_embed_texts)} 个新实体，开始调用 Embedding API...")
 
-    # 5. 批量获取 Embedding
+
     embeddings = get_embeddings(to_embed_texts)
 
-    # 6. 写入 ChromaDB
     collection.add(
         ids=to_embed_ids,
         embeddings=embeddings,
@@ -185,7 +175,7 @@ def init_vector_db(reset: bool = False):
 
 
 def query_test(query: str, n_results: int = 3):
-    """简单检索测试"""
+
     chroma_client = chromadb.PersistentClient(path=CHROMA_DB_PATH)
     collection = chroma_client.get_collection(COLLECTION_NAME)
 

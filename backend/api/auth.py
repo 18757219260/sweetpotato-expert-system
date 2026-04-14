@@ -1,12 +1,4 @@
-"""
-backend/api/auth.py - 微信登录路由
-
-POST /api/login
-  1. 接收微信小程序 wx.login() 返回的 code
-  2. 请求微信服务器换取 openid
-  3. 创建或更新用户记录
-  4. 返回 JWT Token（身份隔离核心）
-"""
+#微信登录路由
 
 import os
 
@@ -42,9 +34,7 @@ class LoginResponse(BaseModel):
 async def login(body: LoginRequest, db: Session = Depends(get_db)):
     """
     微信小程序登录。
-    前端调用 wx.login() 获得临时 code，传入此接口换取 JWT Token。
     """
-    # 1. 请求微信服务器换取 openid（最多重试 2 次，应对偶发超时）
     transport = httpx.AsyncHTTPTransport(retries=2)
     async with httpx.AsyncClient(timeout=15.0, transport=transport) as client:
         resp = await client.get(

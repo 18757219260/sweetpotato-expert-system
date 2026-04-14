@@ -1,9 +1,5 @@
 """
-services/mcp_service.py - Model Context Protocol (MCP) 工具调用服务
-
-功能：
-1. 天气查询工具（和风天气 API）
-2. 工具调用管理与结果格式化
+天气toolcall
 """
 
 import os
@@ -17,9 +13,8 @@ from backend.services.city_id_map import CITY_ID_MAP
 load_dotenv()
 
 # ── 配置 ─────────────────────────────────────────────────────────────────────
-QWEATHER_API_KEY = os.getenv("QWEATHER_API_KEY", "")  # 和风天气 API Key
+QWEATHER_API_KEY = os.getenv("QWEATHER_API_KEY", "")  
 
-# 和风天气 API 端点（使用自定义域名）
 QWEATHER_BASE_URL =os.getenv("QWEATHER_API_HOST", "")
 QWEATHER_GEO_API = f"{QWEATHER_BASE_URL}/v2/city/lookup"
 QWEATHER_WEATHER_NOW_API = f"{QWEATHER_BASE_URL}/v7/weather/now"
@@ -28,7 +23,7 @@ QWEATHER_WEATHER_7D_API = f"{QWEATHER_BASE_URL}/v7/weather/7d"
 
 
 
-# ── 工具定义 ─────────────────────────────────────────────────────────────────
+
 TOOLS = [
     {
         "type": "function",
@@ -56,20 +51,9 @@ TOOLS = [
 ]
 
 
-# ── 工具实现 ─────────────────────────────────────────────────────────────────
 
 def get_weather(location: str, days: int = 1) -> Dict[str, Any]:
-    """
-    获取天气信息（和风天气 API）
 
-    Args:
-        location: 地点名称（支持完整地址或城市名）
-                 例如："浙江省湖州市长兴县" 或 "长兴"
-        days: 查询天数（1/3/7）
-
-    Returns:
-        天气信息字典
-    """
     if not QWEATHER_API_KEY:
         return {
             "success": False,
@@ -78,17 +62,12 @@ def get_weather(location: str, days: int = 1) -> Dict[str, Any]:
         }
 
     try:
-        # 准备请求头（使用 Header 认证）
+    
         headers = {"X-QW-Api-Key": QWEATHER_API_KEY}
-
-        # 直接从映射表获取城市 ID
         location_id = CITY_ID_MAP.get(location, location)
-
-        # 直接使用城市 ID 查询天气
         weather_params = {"location": location_id}
 
         if days == 1:
-            # 实时天气
             weather_resp = requests.get(QWEATHER_WEATHER_NOW_API, params=weather_params, headers=headers, timeout=5)
             weather_data = weather_resp.json()
 
@@ -117,7 +96,7 @@ def get_weather(location: str, days: int = 1) -> Dict[str, Any]:
             }
 
         elif days == 3:
-            # 未来3天预报
+        
             weather_resp = requests.get(QWEATHER_WEATHER_3D_API, params=weather_params, headers=headers, timeout=5)
             weather_data = weather_resp.json()
 
@@ -150,7 +129,7 @@ def get_weather(location: str, days: int = 1) -> Dict[str, Any]:
             }
 
         else:  # days == 7
-            # 未来7天预报
+      
             weather_resp = requests.get(QWEATHER_WEATHER_7D_API, params=weather_params, headers=headers, timeout=5)
             weather_data = weather_resp.json()
 
@@ -198,19 +177,9 @@ def get_weather(location: str, days: int = 1) -> Dict[str, Any]:
 
 
 
-# ── 工具调用管理 ─────────────────────────────────────────────────────────────
 
 def execute_tool(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    执行工具调用
-
-    Args:
-        tool_name: 工具名称
-        arguments: 工具参数
-
-    Returns:
-        工具执行结果
-    """
+ 
     if tool_name == "get_weather":
         return get_weather(
             location=arguments.get("location", ""),
@@ -225,16 +194,7 @@ def execute_tool(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def format_tool_result(tool_name: str, result: Dict[str, Any]) -> str:
-    """
-    格式化工具调用结果为自然语言
 
-    Args:
-        tool_name: 工具名称
-        result: 工具执行结果
-
-    Returns:
-        格式化后的文本
-    """
     if not result.get("success"):
         return f"⚠️ 工具调用失败：{result.get('message', '未知错误')}"
 
@@ -244,7 +204,6 @@ def format_tool_result(tool_name: str, result: Dict[str, Any]) -> str:
         data = result.get("data", {})
 
         if weather_type == "current":
-            # 实时天气
             return f"""📍 {location} 当前天气：
 🌡️ 温度：{data.get('temperature')}（体感 {data.get('feels_like')}）
 ☁️ 天气：{data.get('weather')}
@@ -254,7 +213,6 @@ def format_tool_result(tool_name: str, result: Dict[str, Any]) -> str:
 ⏰ 更新时间：{data.get('update_time')}"""
 
         elif weather_type in ["forecast_3d", "forecast_7d"]:
-            # 预报天气
             days_text = "未来3天" if weather_type == "forecast_3d" else "未来7天"
             forecast_list = data
 
