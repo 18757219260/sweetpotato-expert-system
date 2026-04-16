@@ -1,6 +1,9 @@
-
-import os
+import torch
+import torch.nn as nn
+from torchvision import models, transforms
+from PIL import Image
 import json
+import os
 from pathlib import Path
 from typing import Optional, Tuple, List, Dict
 from dotenv import load_dotenv
@@ -11,7 +14,7 @@ load_dotenv()
 MODEL_PATH = Path(__file__).parent.parent / "models" / "sweet_potato_classifier.pth"
 CLASS_NAMES_PATH = Path(__file__).parent.parent / "models" / "class_names.json"
 KB_PATH = Path(__file__).parent.parent / "data" / "knowledge_base.json"
-DEVICE_TYPE = "cuda" 
+DEVICE_TYPE = "cuda" if torch.cuda.is_available() else "cpu"
 
 _model: Optional[object] = None
 _class_names: Optional[List[str]] = None
@@ -19,7 +22,6 @@ _image_id_to_name: Optional[Dict[str, str]] = None
 
 
 def _load_image_id_mapping():
-
     global _image_id_to_name
 
     if _image_id_to_name is not None:
@@ -40,10 +42,8 @@ def _load_image_id_mapping():
 
 
 def get_chinese_name(image_id: str) -> str:
- 
     mapping = _load_image_id_mapping()
     return mapping.get(image_id, image_id) 
-
 
 
 def _load_model():
@@ -69,9 +69,15 @@ def _load_model():
 
         num_classes = len(_class_names)
 
-
-        model = models.resnet18(pretrained=False)
-        model.fc = nn.Linear(model.fc.in_features, num_classes)
+   
+        model = models.resnet50(weights=None)
+        in_features = model.fc.in_features
+        
+      
+        model.fc = nn.Sequential(
+            nn.Dropout(0.4),
+            nn.Linear(in_features, num_classes)
+        )
 
         if not MODEL_PATH.exists():
             raise FileNotFoundError(
@@ -79,7 +85,7 @@ def _load_model():
                 "请先运行训练脚本生成模型权重"
             )
 
-        state_dict = torch.load(MODEL_PATH, map_location=device)
+        state_dict = torch.load(MODEL_PATH, map_location=device, weights_only=True)
         model.load_state_dict(state_dict)
         model.to(device)
         model.eval()
@@ -95,18 +101,20 @@ def _load_model():
 
 
 def _preprocess_image(image_path: str):
-    """图片预处理（与训练时保持一致）"""
+
     try:
         import torch
         from torchvision import transforms
         from PIL import Image
 
+      
         transform = transforms.Compose([
-            transforms.Resize((224, 224)),
+            transforms.Resize(400),               
+            transforms.CenterCrop(384),           
             transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ])
-
+        
         image = Image.open(image_path).convert("RGB")
         return transform(image).unsqueeze(0)  
 
@@ -115,11 +123,9 @@ def _preprocess_image(image_path: str):
 
 
 def classify_image(image_path: str, top_k: int = 3) -> List[Tuple[str, float]]:
- 
     _load_model()  
 
     import torch
-
     device = torch.device(DEVICE_TYPE)
 
     # 1. 预处理
@@ -142,14 +148,12 @@ def classify_image(image_path: str, top_k: int = 3) -> List[Tuple[str, float]]:
 
 
 def format_classification_result(results: List[Tuple[str, float]]) -> str:
-
     if not results:
         return "图片识别失败，无法确定病害类型。"
 
     top_class, top_conf = results[0]
     top_name = get_chinese_name(top_class)
 
-    # 使用中文名称和"概率"
     main_text = f"根据图片识别，最可能是：{top_name}（概率 {top_conf*100:.1f}%）。"
 
     if len(results) > 1:

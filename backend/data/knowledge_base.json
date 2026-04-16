@@ -205,7 +205,7 @@
     "category": "病害",
     "name": "茎线虫病",
     "aliases": ["糠心病", "空心病"],
-    "image_id": "stem_nematode",
+    "image_id": "",
     "growth_stages": ["大田中后期", "贮藏期"],
     "environmental_factors": ["适温", "偏干旱"],
     "applicable_regions": ["北方及黄淮海产区"],
@@ -340,7 +340,7 @@
     "category": "农业灾害",
     "name": "除草剂药害",
     "aliases": ["化学药害"],
-    "image_id": "herbicide_damage",
+    "image_id": "",
     "growth_stages": ["苗期", "生长前期"],
     "environmental_factors": ["高温干燥", "施药后遇暴雨"],
     "applicable_regions": ["化学除草频繁产区"],
@@ -609,7 +609,7 @@
     "category": "虫害",
     "name": "斜纹夜蛾",
     "aliases": ["夜盗虫", "黑头虫"],
-    "image_id": "armyworm",
+    "image_id": "spodoptera_litura",
     "growth_stages": ["大田生长期"],
     "environmental_factors": ["高温", "干旱"],
     "applicable_regions": ["全国各产区"],
@@ -662,7 +662,7 @@
     "category": "草害",
     "name": "刺苋",
     "aliases": ["野苋菜", "猪母刺"],
-    "image_id": "amaranthus_spinosus",
+    "image_id": "",
     "growth_stages": ["全生育期"],
     "environmental_factors": ["喜温", "喜肥"],
     "applicable_regions": ["南方及黄淮海产区"],
@@ -966,7 +966,7 @@
     "category": "病害",
     "name": "薯瘟病",
     "aliases": ["青枯病", "细菌性枯萎病"],
-    "image_id": "bacterial_wilt",
+    "image_id": "",
     "growth_stages": ["大田生长期"],
     "environmental_factors": ["高温", "多雨寡照", "洪涝"],
     "applicable_regions": ["南方多雨薯区（如广东、福建）"],
@@ -1319,7 +1319,7 @@
     "category": "虫害",
     "name": "甘薯麦蛾",
     "aliases": ["卷叶虫", "折叶虫"],
-    "image_id": "sweet_potato_leaf_folder",
+    "image_id": "brachmia_macroscopa",
     "growth_stages": ["苗期", "生长前期"],
     "environmental_factors": ["高温", "干旱"],
     "applicable_regions": ["全国各产区"],
@@ -1345,7 +1345,7 @@
     "category": "虫害",
     "name": "绿盲蝽",
     "aliases": ["破叶虫", "臭虫"],
-    "image_id": "green_mirid_bug",
+    "image_id": "bug_pest",
     "growth_stages": ["大田生长期"],
     "environmental_factors": ["气候温和", "高湿", "多杂草"],
     "applicable_regions": ["黄淮海主产区"],
@@ -2379,7 +2379,7 @@
     "category": "虫害",
     "name": "甘薯烦夜蛾",
     "aliases": ["银纹夜蛾", "步曲"],
-    "image_id": "moth_pest",
+    "image_id": "",
     "growth_stages": ["大田生长期"],
     "environmental_factors": ["适温", "多雨"],
     "applicable_regions": ["全国各产区"],
@@ -2429,7 +2429,7 @@
     "category": "虫害",
     "name": "短额负蝗",
     "aliases": ["尖头蚂蚱", "扁担钩"],
-    "image_id": "locust_pest",
+    "image_id": "atractomorpha_sinensis",
     "growth_stages": ["大田生长期"],
     "environmental_factors": ["干旱", "田埂杂草多"],
     "applicable_regions": ["全国各产区"],
@@ -2453,7 +2453,7 @@
     "category": "虫害",
     "name": "甘薯白粉虱",
     "aliases": ["小白蛾"],
-    "image_id": "whitefly_pest",
+    "image_id": "",
     "growth_stages": ["大田生长期"],
     "environmental_factors": ["高温", "干旱", "通风不良"],
     "applicable_regions": ["南方产区", "北方温室育苗区"],
@@ -2658,7 +2658,7 @@
     "category": "虫害",
     "name": "甘薯叶野螟",
     "aliases": ["折叶虫", "水螟"],
-    "image_id": "moth_pest",
+    "image_id": "",
     "growth_stages": ["生长期"],
     "environmental_factors": ["多雨寡照", "气候湿润"],
     "applicable_regions": ["南方及长江流域薯区"],
@@ -2941,28 +2941,30 @@
       ]
     }
   },
-  {
-    "id": "pest_027",
+    {
+    "id": "pest_028",
     "category": "虫害",
-    "name": "甘薯白鸟羽蛾",
-    "aliases": ["白羽蛾", "白粉蛾"],
-    "image_id": "moth_pest",
-    "growth_stages": ["生长期"],
-    "environmental_factors": ["通风不良", "高温多湿"],
-    "applicable_regions": ["南方薯区"],
+    "name": "烟青虫",
+    "aliases": ["烟夜蛾", "青虫", "烟草夜蛾"],
+    "image_id": "tobacco_budworm",
+    "growth_stages": ["苗期", "蔓叶生长期"],
+    "environmental_factors": ["气候温和", "光照充足"],
+    "applicable_regions": ["全国各薯区"],
     "soil_types": ["不限"],
     "symptoms": {
-      "description": "幼虫主要在甘薯叶片背面取食叶肉，留下上表皮，形成白色的透明窗斑；随着虫龄增大，会直接把叶片咬成不规则的小孔洞。虽然单虫食量不大，但大发生时也会影响植株长势。",
-      "differential_diagnosis": "成虫极具辨识度：翅膀狭长，分裂成数瓣，边缘长满白色长缘毛，形似白色的微型羽毛。停息在叶片上时，双翅平展，整个身体呈标准的“T”字形。幼虫体表密布白色长毛。"
+      "description": "幼虫具有很强的杂食性，主要危害甘薯的嫩叶和心叶。初孵幼虫在叶背取食叶肉，留下透明的表皮；3龄以后的幼虫进入大食量期，会将叶片咬成不规则的大型孔洞或缺刻，发生严重时，整株叶片可被吃光，仅剩叶脉。幼虫还常钻入顶芽危害，影响茎蔓的正常抽生。",
+      "differential_diagnosis": "与棉铃虫极易混淆。观察幼虫时，烟青虫体表的皮肤刺较长且尖，触感较硬；成虫前翅有一条颜色较深、由内向外斜伸的宽横带，且体型通常比棉铃虫略小。危害甘薯时，它比斜纹夜蛾更倾向于取食顶端的嫩芽部分。"
     },
-    "causes": "鳞翅目羽蛾科害虫。在植株茂密、长势过旺且通风透光不良的田块发生较多。",
+    "causes": "鳞翅目夜蛾科害虫。以蛹在土内越冬，成虫具有很强的趋光性和趋化性，对糖醋液有明显的趋向。一年可发生多代，在甘薯田常与棉铃虫、斜纹夜蛾混合发生。",
     "control_measures": {
       "preventive": [
-        "合理密植，控制氮肥施用，防止甘薯藤蔓徒长，改善田间小气候。",
-        "结合农事操作，摘除带有幼虫的老叶。"
+        "利用成虫的趋光性和趋化性，在田间设置黑光灯或糖醋瓶诱杀成虫。",
+        "甘薯收获后深翻土壤，破坏蛹室，利用冬季低温或天敌消灭越冬蛹。",
+        "及时清除田间及周边杂草，减少早期寄主植物。"
       ],
       "chemical": [
-        "一般不需要单独用药，在防治斜纹夜蛾、麦蛾等主要害虫时，使用甲维盐或菊酯类农药即可将其兼治。"
+        "掌握在幼虫3龄前的关键期喷药。选用甲维盐、氯虫苯甲酰胺或茚虫威等高效低毒杀虫剂。",
+        "施药时间建议选在清晨或傍晚，此时幼虫活跃度高，防治效果更佳。"
       ]
     }
   },
@@ -3089,6 +3091,181 @@
       ],
       "chemical": [
         "一旦发现顶端新叶发黄变白，常规硫酸铁灌根无效。必须立即使用0.1%-0.2%的“螯合铁”（EDTA-Fe 或 EDDHA-Fe）水溶液进行叶面喷施，补充可吸收铁源，7天一次，连喷2-3次即可恢复转绿。"
+      ]
+    }
+  },
+  {
+    "id": "pest_029",
+    "category": "虫害",
+    "name": "笨蝗",
+    "aliases": ["疙瘩蝗", "大块蝗", "石蝗"],
+    "image_id": "haplotropis_brunneriana",
+    "growth_stages": ["苗期", "蔓叶生长期"],
+    "environmental_factors": ["干旱", "杂草丛生"],
+    "applicable_regions": ["北方薯区"],
+    "soil_types": ["荒坡地", "沙壤土"],
+    "symptoms": {
+      "description": "成虫和若虫（蝗蝻）均以咀嚼式口器咬食甘薯叶片。由于其食量大，发生严重时会将叶片啃食成大的缺刻，甚至仅剩主脉，导致植株光合作用受阻，严重影响产量。",
+      "differential_diagnosis": "笨蝗体型粗短，表面极不平整，呈灰褐色或暗灰色，看起来像土块，且翅膀退化，不能飞行，只能跳跃。这与能长距离飞行的东亚飞蝗有显著区别。"
+    },
+    "causes": "直翅目癞蝗科害虫。常在荒坡、田埂越冬，春季干旱时易暴发，随后向农田迁移。",
+    "control_measures": {
+      "preventive": [
+        "铲除田边地埂杂草，破坏其产卵地和初期生存环境。",
+        "利用其不能飞行的特点，进行人工捕捉。"
+      ],
+      "chemical": [
+        "在若虫期（蝗蝻）群集危害时，使用敌百虫、溴氰菊酯或高效氯氰菊酯进行大面积喷雾。"
+      ]
+    }
+  },
+  {
+    "id": "pest_030",
+    "category": "虫害",
+    "name": "东亚飞蝗",
+    "aliases": ["蚂蚱", "蝗虫"],
+    "image_id": "locusta_migratoria",
+    "growth_stages": ["蔓叶生长期"],
+    "environmental_factors": ["旱涝交替", "持续高温"],
+    "applicable_regions": ["全国产区（以黄淮海平原为主）"],
+    "soil_types": ["滨湖、沿海及河滩荒地"],
+    "symptoms": {
+      "description": "具有极强的群集性和迁飞性。成虫和若虫疯狂咬食甘薯叶片及嫩茎，暴发时可将整片田块的绿色植株瞬间吃光，仅留光秃秃的藤蔓，造成毁灭性绝产。",
+      "differential_diagnosis": "体型较大，具备极强的飞行能力。若虫颜色随密度变化（散居型绿色，群居型黑褐色）。其食量及迁移规模远超笨蝗等本地小型蝗虫。"
+    },
+    "causes": "直翅目蝗科。其暴发通常与“旱极而蝗”的生态规律有关，即先涝后旱或长期干旱导致荒滩面积扩大，有利于产卵。",
+    "control_measures": {
+      "preventive": [
+        "改造蝗区，植树造林，减少其适生环境。",
+        "利用蝗虫微孢子虫、印楝素等生物农药进行绿色防控。"
+      ],
+      "chemical": [
+        "大发生阶段，组织飞机或大型机械进行化学围歼，使用马拉硫磷、卡死克等药剂。"
+      ]
+    }
+  },
+  {
+    "id": "pest_031",
+    "category": "虫害",
+    "name": "甘薯茎螟",
+    "aliases": ["薯蔓螟", "甘薯蛀茎虫", "钻心虫"],
+    "image_id": "omphisa_anastomosalis",
+    "growth_stages": ["蔓叶生长期", "结薯期"],
+    "environmental_factors": ["高温多湿"],
+    "applicable_regions": ["南方薯区"],
+    "soil_types": ["不限"],
+    "symptoms": {
+      "description": "幼虫从茎蔓基部或腋芽处钻入茎内纵向蛀食，造成髓部中空。受害处常肿大形成虫瘿，叶片因水分养分运输受阻而变黄、枯萎，甚至导致整株藤蔓死亡。受害部位常有排出的褐色粪便。",
+      "differential_diagnosis": "与甘薯小象甲不同，茎螟主要危害地上的主蔓及分枝，而小象甲主要危害地下薯块。切开肿大的茎部可见带紫色斑点的乳白色幼虫。"
+    },
+    "causes": "鳞翅目螟蛾科。成虫具有趋光性，卵产于叶腋或茎部。幼虫孵化后迅速钻入茎内，具有隐蔽性强的特点。",
+    "control_measures": {
+      "preventive": [
+        "选种抗虫品种。及时剪除受害的肿大茎蔓并销毁。",
+        "收获后清理残株败叶，深翻土壤减少越冬基数。"
+      ],
+      "chemical": [
+        "在成虫产卵盛期和幼虫孵化初期，喷洒高效氯氰菊酯、杀虫双或氯虫苯甲酰胺，重点喷布茎蔓基部。"
+      ]
+    }
+  },
+  {
+    "id": "pest_032",
+    "category": "虫害",
+    "name": "甘薯潜叶蛾",
+    "aliases": ["旋花潜蛾", "画图虫"],
+    "image_id": "bedellia_somnulentella",
+    "growth_stages": ["蔓叶生长期"],
+    "environmental_factors": ["通风不良", "干燥气候"],
+    "applicable_regions": ["全国各薯区"],
+    "soil_types": ["不限"],
+    "symptoms": {
+      "description": "极小的幼虫潜入甘薯叶片的上下表皮之间啃食叶肉，形成曲折的蛇形隧道（潜道），潜道初期为白色，后期变褐色。严重时多条潜道汇合，导致叶片大面积枯焦脱落。",
+      "differential_diagnosis": "叶片表面呈现明显的半透明“地图”状纹路。用光照射可见潜道内有极小的幼虫和黑色点状粪便。不同于羽蛾的开孔危害，潜叶蛾始终在皮下活动。"
+    },
+    "causes": "鳞翅目潜蛾科。由于体型极小，初期危害不易察觉，一旦暴发会迅速导致叶面积减少。",
+    "control_measures": {
+      "preventive": [
+        "清除田间及周边的旋花科杂草（如野牵牛），切断中间寄主。",
+        "通过灌溉增加湿度，不利于成虫活动。"
+      ],
+      "chemical": [
+        "发生初期选用渗透性强的药剂，如阿维菌素、灭蝇胺或吡虫啉进行喷雾。"
+      ]
+    }
+  },
+ 
+  {
+    "id": "pest_034",
+    "category": "虫害",
+    "name": "甘薯羽蛾",
+    "aliases": ["白羽蛾", "甘薯鸟羽蛾"],
+    "image_id": "sphenarches_anisodactylus",
+    "growth_stages": ["生长期"],
+    "environmental_factors": ["气候温暖", "田间郁闭"],
+    "applicable_regions": ["南方薯区为主"],
+    "soil_types": ["不限"],
+    "symptoms": {
+      "description": "幼虫主要危害嫩叶和心叶，取食后形成许多细小、不规则的孔洞或缺刻。随着虫龄增大，受害孔洞变大，严重影响叶片正常生长。",
+      "differential_diagnosis": "成虫停息时翅膀呈平展状，形似“T”字，翅缘有长缘毛。幼虫身体多毛，颜色多为黄绿色或带红褐色。与麦蛾相比，它不卷叶，只在叶背或心叶缝隙中取食。"
+    },
+    "causes": "鳞翅目羽蛾科。卵多产于心叶或叶背，幼虫孵化后即近处取食。在甘薯生长中后期发生较多。",
+    "control_measures": {
+      "preventive": [
+        "结合农事操作，在除草时手动摘除心叶内的幼虫。",
+        "保持田间通风透光，避免植株徒长。"
+      ],
+      "chemical": [
+        "可参照烟青虫或麦蛾的防治方案，使用菊酯类农药即可有效控制。"
+      ]
+    }
+  },
+  {
+    "id": "pest_036",
+    "category": "虫害",
+    "name": "五趾羽蛾",
+    "aliases": ["甘薯五趾羽蛾"],
+    "image_id": "diacrotricha_fasciola",
+    "growth_stages": ["蔓叶生长期"],
+    "environmental_factors": ["高温"],
+    "applicable_regions": ["华南薯区"],
+    "soil_types": ["不限"],
+    "symptoms": {
+      "description": "主要危害甘薯的叶片和花蕾。幼虫取食嫩叶造成穿孔，若危害严重，会导致新梢发育不良。",
+      "differential_diagnosis": "成虫前翅分裂为二瓣，后翅分裂为三瓣，总计五瓣，故名“五趾”。这是其区别于其他羽蛾的核心特征。幼虫体型细长，黄绿色，被有稀疏的长毛。"
+    },
+    "causes": "鳞翅目羽蛾科。专门危害旋花科植物，在甘薯田间多发生于夏秋季节。",
+    "control_measures": {
+      "preventive": [
+        "定期巡视，发现心叶受害时及时人工捕杀幼虫。"
+      ],
+      "chemical": [
+        "喷洒苏云金杆菌（Bt）或高效氯氟氰菊酯进行防治。"
+      ]
+    }
+  },
+  {
+    "id": "pest_037",
+    "category": "虫害",
+    "name": "甘薯绮夜蛾",
+    "aliases": ["旋花绮夜蛾", "甘薯叶夜蛾"],
+    "image_id": "aedia_leucomelas",
+    "growth_stages": ["蔓叶生长期"],
+    "environmental_factors": ["温和多雨"],
+    "applicable_regions": ["全国各薯区"],
+    "soil_types": ["不限"],
+    "symptoms": {
+      "description": "幼虫是贪食性的叶食者。1-2龄幼虫取食叶肉留下表皮；3龄后进入暴食期，可将叶片吃成大缺刻或仅留残破叶脉。其危害状类似于烟青虫，但排泄物较多，常堆积在叶腋处。",
+      "differential_diagnosis": "幼虫体色多变，但体侧常有一条明显的白色或黄色纵线。成虫前翅深褐色，具复杂花纹，后翅近基部有明显的白色大斑块。其体型比羽蛾大得多，且不卷叶。"
+    },
+    "causes": "鳞翅目夜蛾科。以蛹在土中越冬。成虫具有强趋光性，多在夜间活动产卵。",
+    "control_measures": {
+      "preventive": [
+        "利用杀虫灯大规模诱杀成虫。",
+        "秋冬季翻耕农田，将土中的虫蛹暴露于地表冻死或被天敌啄食。"
+      ],
+      "chemical": [
+        "在幼虫低龄期喷洒甲维盐、灭幼脲或茚虫威。建议喷药时顺带喷洒土表，因为大龄幼虫有时会潜伏在土表根际。"
       ]
     }
   }

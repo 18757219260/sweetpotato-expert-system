@@ -11,38 +11,25 @@ build/
 venv/
 ENV/
 backend/static/images/
-
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-
 .env
 .env.local
 
-*.db
-*.sqlite
-*.sqlite3
-
-# Logs
 *.log
 
-# OS
 .DS_Store
 Thumbs.db
 
-# Temporary files
 *.tmp
 *.bak
 *.cache
 
-# Uploads
 backend/data/uploads/*
 !backend/data/uploads/.gitkeep
 CLAUDE.md
-# ChromaDB
-backend/data/chroma_db/
 
-# Claude
 .claude/

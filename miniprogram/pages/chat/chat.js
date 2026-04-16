@@ -1,14 +1,10 @@
-// miniprogram/pages/chat/chat.js
 const { streamChat, fetchHistory, clearHistory, fetchSessions, createSession, deleteSession, renameSession } = require('../../utils/request')
 const { mdToHtml } = require('../../utils/markdown')
 const { STATIC_BASE, API_BASE } = require('../../config')
 
 const recorderManager = wx.getRecorderManager()
 
-
-
 const IMG_TAG_RE = /\[图片:\w+\]/g
-
 
 function buildSegments(segments) {
   return segments.map(seg => {
@@ -18,6 +14,7 @@ function buildSegments(segments) {
     return { type: 'text', html: mdToHtml(seg.content) }
   })
 }
+
 Page({
   data: {
     messages: [],
@@ -25,16 +22,16 @@ Page({
     sending: false,
     scrollToId: '',
     mode: 'pro',
-    inputMode: 'keyboard',  // 'keyboard' | 'voice'
+    inputMode: 'keyboard',  
     recording: false,
-    // 多会话
+
     sessions: [],
     currentSessionId: null,
     drawerOpen: false,
-    // 图片上传
-    pendingImage: null,  // 暂存待发送的图片路径
-    // 用户头像
-    userAvatarUrl: '',  // 用户微信头像
+
+    pendingImage: null,  
+
+    userAvatarUrl: '',  
   },
 
   onLoad() {
@@ -43,7 +40,19 @@ Page({
     this._loadUserAvatar()
   },
 
-  // ── 加载用户头像 ──────────────────────────────────────────────────────────
+  // --- 新增：获取带有标志位的系统欢迎消息 ---
+  _getWelcomeMsg() {
+    const welcomeText = '你好！我是甘薯问答助手。解答种植疑难、诊断病虫害我都是可以的嚒。秒识17种常见害虫，其他的也能为您分析，请提问或发图吧！';
+    return {
+      id: 'welcome_msg_0',
+      role: 'assistant',
+      segments: [{ type: 'text', html: mdToHtml(welcomeText) }],
+      rawText: welcomeText,
+      done: true,
+      showSuggestions: true // 控制农场档案和快捷按钮是否显示在气泡下方
+    };
+  },
+
   _loadUserAvatar() {
     const avatarUrl = wx.getStorageSync('userAvatarUrl')
     if (avatarUrl) {
@@ -51,7 +60,6 @@ Page({
     }
   },
 
-  // ── 选择头像（用户主动授权）────────────────────────────────────────────────
   onChooseAvatar(e) {
     const { avatarUrl } = e.detail
     this.setData({ userAvatarUrl: avatarUrl })
@@ -59,7 +67,6 @@ Page({
     wx.showToast({ title: '头像已更新', icon: 'success' })
   },
 
-  // ── 语音初始化 ────────────────────────────────────────────────────────────
   _initVoice() {
     recorderManager.onStart(() => {
       console.log('[voice] onStart: recording started OK')
@@ -105,13 +112,11 @@ Page({
     })
   },
 
-  // ── 切换输入模式 ──────────────────────────────────────────────────────────
   onToggleInputMode() {
     const inputMode = this.data.inputMode === 'keyboard' ? 'voice' : 'keyboard'
     this.setData({ inputMode })
   },
 
-  // ── 语音输入：按下开始 ────────────────────────────────────────────────────
   onVoiceStart() {
     console.log('[voice] onVoiceStart called')
     this.setData({ recording: true })
@@ -119,7 +124,6 @@ Page({
     console.log('[voice] recorderManager.start called')
   },
 
-  // ── 语音输入：松开结束 ────────────────────────────────────────────────────
   onVoiceEnd() {
     console.log('[voice] onVoiceEnd called')
     this.setData({ recording: false })
@@ -127,14 +131,13 @@ Page({
     console.log('[voice] recorderManager.stop called')
   },
 
-  // ── 初始化会话列表 ────────────────────────────────────────────────────────
   async _initSessions() {
     try {
       const data = await fetchSessions()
       const sessions = data.sessions || []
       if (sessions.length === 0) {
         const s = await createSession('新对话')
-        this.setData({ sessions: [s], currentSessionId: s.id })
+        this.setData({ sessions: [s], currentSessionId: s.id, messages: [this._getWelcomeMsg()] })
       } else {
         this.setData({ sessions, currentSessionId: sessions[0].id })
         await this._loadHistory(sessions[0].id)
@@ -144,7 +147,6 @@ Page({
     }
   },
 
-  // ── 加载指定会话的历史 ────────────────────────────────────────────────────
   async _loadHistory(sessionId) {
     try {
       const data = await fetchHistory(50, sessionId)
@@ -157,6 +159,11 @@ Page({
         rawText: m.content,
         done: true,
       }))
+      
+      if (messages.length === 0) {
+        messages.push(this._getWelcomeMsg());
+      }
+
       this.setData({ messages })
       this._scrollToBottom()
     } catch (e) {
@@ -164,11 +171,8 @@ Page({
     }
   },
 
-  // ── 抽屉开关 ──────────────────────────────────────────────────────────────
-  onOpenDrawer() { this.setData({ drawerOpen: true }) },
   onCloseDrawer() { this.setData({ drawerOpen: false }) },
-
-  // ── 切换会话 ──────────────────────────────────────────────────────────────
+  onOpenDrawer() { this.setData({ drawerOpen: true }) },
   async onSelectSession(e) {
     const id = e.currentTarget.dataset.id
     if (id === this.data.currentSessionId) {
@@ -176,21 +180,18 @@ Page({
       return
     }
     this.setData({ currentSessionId: id, messages: [], drawerOpen: false })
-    // 切换会话时重新加载历史
     await this._loadHistory(id)
   },
 
-  // ── 新建会话 ──────────────────────────────────────────────────────────────
   async onNewSession() {
     try {
       const s = await createSession('新对话')
-      this.setData({ sessions: [s, ...this.data.sessions], currentSessionId: s.id, messages: [], drawerOpen: false })
+      this.setData({ sessions: [s, ...this.data.sessions], currentSessionId: s.id, messages: [this._getWelcomeMsg()], drawerOpen: false })
     } catch (e) {
       wx.showToast({ title: '新建失败', icon: 'none' })
     }
   },
 
-  // ── 重命名会话 ────────────────────────────────────────────────────────────
   onRenameSession(e) {
     const { id, title } = e.currentTarget.dataset
     wx.showModal({
@@ -212,7 +213,6 @@ Page({
     })
   },
 
-  // ── 删除会话 ──────────────────────────────────────────────────────────────
   onDeleteSession(e) {
     const id = e.currentTarget.dataset.id
     wx.showModal({
@@ -227,7 +227,7 @@ Page({
           if (currentSessionId === id) {
             if (sessions.length === 0) {
               const s = await createSession('新对话')
-              sessions = [s]; currentSessionId = s.id; messages = []
+              sessions = [s]; currentSessionId = s.id; messages = [this._getWelcomeMsg()]
             } else {
               currentSessionId = sessions[0].id; messages = []
               await this._loadHistory(currentSessionId)
@@ -241,29 +241,33 @@ Page({
     })
   },
 
-  // ── 打开农场档案 ────────────────────────────────────────────────────────────
   onOpenFarm() {
     wx.navigateTo({ url: '/pages/farm/farm' })
   },
 
-  // ── 输入框 ────────────────────────────────────────────────────────────────
   onInputChange(e) {
     this.setData({ inputText: e.detail.value })
   },
 
-  // ── 发送消息 ──────────────────────────────────────────────────────────────
   async onSend() {
     const question = this.data.inputText.trim()
     const pendingImage = this.data.pendingImage
 
-    // 如果有图片，调用图片上传接口
+    // 发送消息时，把欢迎语下面的快捷按钮区域隐藏掉，保持界面清爽
+    const updatedMessages = this.data.messages.map(m => {
+      if (m.id === 'welcome_msg_0') {
+        return { ...m, showSuggestions: false };
+      }
+      return m;
+    });
+    this.setData({ messages: updatedMessages });
+
     if (pendingImage) {
       this._uploadAndAnalyze(pendingImage, question)
       this.setData({ inputText: '', pendingImage: null })
       return
     }
 
-    // 纯文本消息
     if (!question || this.data.sending) return
 
     this.setData({ inputText: '', sending: true })
@@ -311,7 +315,7 @@ Page({
           .join('\n')
         this._updateAiMsg(aiMsgId, renderedSegments, true, rawText)
         this.setData({ sending: false })
-        // 若会话标题还是"新对话"，自动用问题前20字更新
+     
         const curSession = this.data.sessions.find(s => s.id === this.data.currentSessionId)
         if (curSession && curSession.title === '新对话') {
           const newTitle = question.slice(0, 20)
@@ -348,7 +352,6 @@ Page({
     this.setData({ messages })
   },
 
-  // ── 图片上传 ──────────────────────────────────────────────────────────────
   onChooseImage() {
     wx.chooseMedia({
       count: 1,
@@ -356,7 +359,6 @@ Page({
       sourceType: ['album', 'camera'],
       success: (res) => {
         const tempFilePath = res.tempFiles[0].tempFilePath
-        // 暂存图片路径，不立即上传
         this.setData({ pendingImage: tempFilePath })
         wx.showToast({ title: '图片已选择，可添加描述后发送', icon: 'none', duration: 2000 })
       },
@@ -375,7 +377,6 @@ Page({
     if (this.data.sending) return
     this.setData({ sending: true })
 
-    // 1. 添加用户消息（显示图片和描述）
     const segments = [{ type: 'image', url: filePath }]
     if (description) {
       segments.push({ type: 'text', html: description })
@@ -389,7 +390,6 @@ Page({
     this.setData({ messages: [...this.data.messages, userMsg] })
     this._scrollToBottom()
 
-    // 2. 添加 AI 消息占位
     const aiMsgId = `a_${Date.now()}`
     const aiMsg = {
       id: aiMsgId,
@@ -400,7 +400,6 @@ Page({
     this.setData({ messages: [...this.data.messages, aiMsg] })
     this._scrollToBottom()
 
-    // 3. 上传图片并获取流式响应
     const token = wx.getStorageSync('token')
     const API_BASE = getApp().globalData.apiBase
 
@@ -411,8 +410,8 @@ Page({
       formData: {
         mode: this.data.mode,
         session_id: this.data.currentSessionId,
-        stream: 'false',  // 微信小程序不支持流式响应
-        description: description || ''  // 传递用户的文字描述
+        stream: 'false', 
+        description: description || ''  
       },
       header: { Authorization: `Bearer ${token}` },
       success: (res) => {
@@ -421,8 +420,6 @@ Page({
           this.setData({ sending: false })
           return
         }
-
-        // 解析完整 JSON 响应
         this._parseUploadResponse(res.data, aiMsgId)
       },
       fail: (err) => {
@@ -434,26 +431,14 @@ Page({
   },
 
   _parseUploadResponse(data, aiMsgId) {
-    // 处理完整 JSON 响应
-    console.log('[DEBUG] _parseUploadResponse called, data type:', typeof data)
-    console.log('[DEBUG] data:', data)
-
     try {
-      // 如果 data 已经是对象，直接使用；否则解析 JSON
       const result = typeof data === 'string' ? JSON.parse(data) : data
-
-      console.log('[DEBUG] result.type:', result.type)
-      console.log('[DEBUG] result.llm_response length:', result.llm_response ? result.llm_response.length : 0)
 
       if (result.type === 'error') {
         this._updateAiMsg(aiMsgId, [{ type: 'text', html: `<span style="color:#f44336;">${result.detail}</span>` }], true)
       } else if (result.type === 'low_confidence') {
-        // 置信度过低 - 直接显示 LLM 响应（不显示 VL 分析框）
         const segments = []
-
-        // 添加 LLM 响应
         if (result.segments && result.segments.length > 0) {
-          // 使用 buildSegments 函数转换格式
           const convertedSegments = buildSegments(result.segments)
           segments.push(...convertedSegments)
         } else if (result.llm_response) {
@@ -461,34 +446,21 @@ Page({
         }
         this._updateAiMsg(aiMsgId, segments, true)
       } else if (result.type === 'success') {
-        // 置信度足够，显示识别结果和 LLM 响应
         const segments = []
-
-        // 添加 CV 识别结果（带概率）
         if (result.cv_result) {
           segments.push({
             type: 'text',
             html: `<div style="background:#e3f2fd;padding:12px;border-radius:8px;margin-bottom:12px;"><strong>🔍 识别结果：</strong><br/>${result.cv_result.replace(/\n/g, '<br/>')}</div>`
           })
         }
-
-        // 添加 LLM 诊断建议
-        // 优先使用 segments（包含图片），否则使用 llm_response（纯文本）
         if (result.segments && result.segments.length > 0) {
-          console.log('[DEBUG] Using segments from backend:', result.segments.length)
-          // 使用 buildSegments 函数转换格式
           const convertedSegments = buildSegments(result.segments)
           segments.push(...convertedSegments)
         } else if (result.llm_response) {
-          console.log('[DEBUG] Using llm_response (no segments)')
           segments.push({ type: 'text', html: mdToHtml(result.llm_response) })
-        } else {
-          console.log('[DEBUG] LLM response is empty!')
         }
-
         this._updateAiMsg(aiMsgId, segments, true)
       } else {
-        // 兼容旧格式
         this._updateAiMsg(aiMsgId, [{ type: 'text', html: result.content || data }], true)
       }
     } catch (e) {
@@ -499,18 +471,24 @@ Page({
     this._scrollToBottom()
   },
 
-  // ── 模式切换 ──────────────────────────────────────────────────────────────
   onToggleMode() {
     this.setData({ mode: this.data.mode === 'pro' ? 'flash' : 'pro' })
   },
 
-  // ── 快捷问题 ──────────────────────────────────────────────────────────────
   onQuickAsk(e) {
     const q = e.currentTarget.dataset.q
-    this.setData({ inputText: q }, () => this.onSend())
+    
+    // 点击快捷问题时也隐藏按钮区域
+    const updatedMessages = this.data.messages.map(m => {
+      if (m.id === 'welcome_msg_0') {
+        return { ...m, showSuggestions: false };
+      }
+      return m;
+    });
+
+    this.setData({ inputText: q, messages: updatedMessages }, () => this.onSend())
   },
 
-  // ── 清空当前会话 ──────────────────────────────────────────────────────────
   onClear() {
     wx.showModal({
       title: '清空对话', content: '确定清除当前会话的所有记录吗？', confirmColor: '#f44336',
@@ -518,7 +496,7 @@ Page({
         if (!confirm) return
         try {
           await clearHistory(this.data.currentSessionId)
-          this.setData({ messages: [] })
+          this.setData({ messages: [this._getWelcomeMsg()] })
           wx.showToast({ title: '已清空', icon: 'success' })
         } catch (e) {
           wx.showToast({ title: '清空失败', icon: 'none' })
@@ -527,7 +505,6 @@ Page({
     })
   },
 
-  // ── 图片预览 ──────────────────────────────────────────────────────────────
   onPreviewImage(e) {
     const { url } = e.currentTarget.dataset
     const allUrls = this.data.messages
@@ -535,7 +512,6 @@ Page({
     wx.previewImage({ current: url, urls: allUrls.length ? allUrls : [url] })
   },
 
-  // ── 图片加载错误 ──────────────────────────────────────────────────────────
   onImageError(e) {
     const { url } = e.currentTarget.dataset
     console.error('[image] load error:', url)
@@ -546,13 +522,11 @@ Page({
     })
   },
 
-  // ── 图片加载成功 ──────────────────────────────────────────────────────────
   onImageLoad(e) {
     const { url } = e.currentTarget.dataset
     console.log('[image] load success:', url, 'size:', e.detail.width, 'x', e.detail.height)
   },
 
-  // ── 滚动到底部 ────────────────────────────────────────────────────────────
   _scrollToBottom() {
     const messages = this.data.messages
     if (messages.length === 0) return

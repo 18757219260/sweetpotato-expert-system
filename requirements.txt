@@ -36,3 +36,5 @@ pydantic-settings==2.3.1
 
 # Baidu ASR
 baidu-aip==4.16.13
+matplotlib 
+scikit-learn

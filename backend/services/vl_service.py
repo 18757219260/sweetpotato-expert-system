@@ -58,14 +58,19 @@ def analyze_image_with_vl(image_path: str, user_description: str = "") -> Dict:
 
     prompt = f"""请分析这张图片,可能与以下相关：
 1. 种植：图片显示种植环境、土壤、生长状况、田间管理等
-4. 无关内容：图片与甘薯种植完全无关
+2. 病害识别：图片显示甘薯的病害症状（如叶片病斑、根部腐烂）
+3. 草害识别：图片显示与甘薯无关的杂草（（如马唐、香附子、牛筋草））
+4. 品种识别：图片显示完整的甘薯块根，用于识别品种
+5. 无关内容：图片与甘薯种植完全无关
 
 用户补充描述：{user_description if user_description else "无"}
 
 请以 JSON 格式返回：
 {{
     "description": "详细描述图片内容",
-    "category": "cultivation/other"
+    "category": "disease/variety/weedamage/cultivation/other",
+    "confidence": 0.0-1.0,
+    "keywords": ["关键词列表"]
 }}"""
     try:
         response = client.chat.completions.create(
@@ -104,13 +109,13 @@ def analyze_image_with_vl(image_path: str, user_description: str = "") -> Dict:
         result = json.loads(json_str)
 
        
-        required_fields = ["description", "category"]
+        required_fields = ["description", "category", "confidence", "keywords"]
         for field in required_fields:
             if field not in result:
                 raise ValueError(f"VL 响应缺少必需字段：{field}")
 
 
-        valid_categories = [ "cultivation", "other"]
+        valid_categories = [ "disease", "variety", "weedamage", "cultivation", "other"]
         if result["category"] not in valid_categories:
             result["category"] = "other"
         return result
@@ -120,8 +125,11 @@ def analyze_image_with_vl(image_path: str, user_description: str = "") -> Dict:
 
         return {
             "description": content,
-            "category": "other"
+            "category": "other",
+               "confidence": 0.5,
+            "keywords": []
         }
+        
     except Exception as e:
         print(f"[VL] API 调用失败：{e}")
         raise RuntimeError(f"Qwen-VL API 调用失败：{str(e)}")
@@ -129,7 +137,7 @@ def analyze_image_with_vl(image_path: str, user_description: str = "") -> Dict:
 
 if __name__=="__main__":
     
-    test_image = Path(__file__).parent.parent / "static" / "images" / "acalypha_australis"/"1.jpg"
+    test_image = Path(__file__).parent.parent / "static" / "images" / "cellar_storage"/"1.jpg"
 
     if test_image.exists():
         result = analyze_image_with_vl(str(test_image), "这是啥")

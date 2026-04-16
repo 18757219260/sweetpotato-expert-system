@@ -61,7 +61,16 @@
   white-space: pre-wrap;
   margin-bottom: 40rpx;
 }
-/* ── 农场档案按钮（空状态） ── */
+
+/* ── 农场档案按钮和快捷列表 (现在独立放在外面) ── */
+.welcome-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20rpx 0 40rpx 0;
+}
+
 .farm-profile-btn {
   display: flex;
   align-items: center;
@@ -70,7 +79,7 @@
   color: #fff;
   border-radius: 48rpx;
   padding: 20rpx 48rpx;
-  margin: 0 auto 32rpx;
+  margin-bottom: 32rpx;
   box-shadow: 0 4rpx 16rpx rgba(76, 175, 80, 0.3);
 }
 .farm-profile-icon {
@@ -86,6 +95,7 @@
   flex-wrap: wrap;
   gap: 16rpx;
   justify-content: center;
+  padding: 0 20rpx;
 }
 .quick-item {
   background: #fff;
@@ -95,6 +105,10 @@
   padding: 12rpx 28rpx;
   font-size: 26rpx;
 }
+.quick-item:active {
+  background-color: #e8f5e9;
+}
+
 
 /* ── 消息行 ── */
 .msg-row {
@@ -320,7 +334,6 @@
   padding: 4rpx 12rpx;
   margin-left: 12rpx;
 }
-
 
 .mode-btn {
   width: 80rpx;

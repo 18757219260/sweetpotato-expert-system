@@ -1,4 +1,3 @@
-
 __import__('pysqlite3')
 import sys
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
@@ -73,19 +72,15 @@ def build_full_text(record: dict) -> str:
     if record.get("soil_types"):
         parts.append(f"土壤类型：{'、'.join(record['soil_types'])}")
 
-  
-
     return "\n".join(parts)
 
 
 def compute_chunk_id(record_id: str, chunk_index: int, chunk_text: str) -> str:
-
     content = f"{record_id}_{chunk_index}_{chunk_text}"
     return hashlib.md5(content.encode("utf-8")).hexdigest()
 
 
 def get_embeddings(texts: list[str]) -> list[list[float]]:
-
     all_embeddings = []
     for i in range(0, len(texts), EMBED_BATCH_SIZE):
         batch = texts[i: i + EMBED_BATCH_SIZE]
@@ -102,17 +97,16 @@ def get_embeddings(texts: list[str]) -> list[list[float]]:
 
 
 def init_vector_db(reset: bool = False):
-    """主入库流程"""
+    """主入库流程 - 已修改为强制全量重新向量化"""
 
     os.makedirs(CHROMA_DB_PATH, exist_ok=True)
     chroma_client = chromadb.PersistentClient(path=CHROMA_DB_PATH)
 
-    if reset:
-        try:
-            chroma_client.delete_collection(COLLECTION_NAME)
-            print(f"[重置] 已删除旧集合：{COLLECTION_NAME}")
-        except Exception:
-            pass
+    try:
+        chroma_client.delete_collection(COLLECTION_NAME)
+        print(f"[全量更新] 已删除旧集合，开始重新向量化：{COLLECTION_NAME}")
+    except Exception:
+        pass
 
     collection = chroma_client.get_or_create_collection(
         name=COLLECTION_NAME,
@@ -125,12 +119,6 @@ def init_vector_db(reset: bool = False):
     print(f"[加载] 读取知识库记录 {len(records)} 条")
 
 
-    existing_ids: set[str] = set()
-    if collection.count() > 0:
-        existing = collection.get(include=[])
-        existing_ids = set(existing["ids"])
-        print(f"[增量] ChromaDB 中已有 {len(existing_ids)} 个实体向量，将跳过重复项")
-
     to_embed_texts: list[str] = []
     to_embed_ids: list[str] = []
     to_embed_metas: list[dict] = []
@@ -138,9 +126,6 @@ def init_vector_db(reset: bool = False):
     for record in records:
         full_text = build_full_text(record)
         entity_id = compute_chunk_id(record["id"], 0, full_text)
-
-        if entity_id in existing_ids:
-            continue 
 
         to_embed_texts.append(full_text)
         to_embed_ids.append(entity_id)
@@ -156,10 +141,10 @@ def init_vector_db(reset: bool = False):
         })
 
     if not to_embed_texts:
-        print("[完成] 知识库无更新，无需重新入库")
+        print("[完成] 知识库无内容")
         return
 
-    print(f"[向量化] 需要处理 {len(to_embed_texts)} 个新实体，开始调用 Embedding API...")
+    print(f"[向量化] 重新处理 {len(to_embed_texts)} 个实体，开始调用 Embedding API...")
 
 
     embeddings = get_embeddings(to_embed_texts)
@@ -171,7 +156,7 @@ def init_vector_db(reset: bool = False):
         metadatas=to_embed_metas,
     )
 
-    print(f"[完成] 成功入库 {len(to_embed_texts)} 个实体，ChromaDB 总计 {collection.count()} 个")
+    print(f"[完成] 成功重新入库 {len(to_embed_texts)} 个实体，ChromaDB 总计 {collection.count()} 个")
 
 
 def query_test(query: str, n_results: int = 3):

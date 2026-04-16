@@ -1,5 +1,3 @@
-// miniprogram/pages/index/index.js
-// 启动页：自动登录后跳转到聊天页
 
 const app = getApp()
 
