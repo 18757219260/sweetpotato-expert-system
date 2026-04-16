@@ -23,7 +23,7 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 def _sse(data: dict) -> str:
     """SSE 格式化"""
     import json
-    return f"data: {json.dumps(data, ensure_ascii=False)}\\n\\n"
+    return f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
 async def _generate_from_image(

@@ -432,7 +432,27 @@ Page({
 
   _parseUploadResponse(data, aiMsgId) {
     try {
-      const result = typeof data === 'string' ? JSON.parse(data) : data
+      // wx.uploadFile 不支持流式，收到的是完整 SSE 字符串，需要手动解析
+      let result
+      if (typeof data === 'string' && data.startsWith('data: ')) {
+        // 收集所有 content 块
+        const lines = data.split('\n')
+        let fullContent = ''
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          try {
+            const event = JSON.parse(line.slice(6))
+            if (event.type === 'content' || event.type === 'text') fullContent += event.content || ''
+            else if (event.type === 'error') {
+              result = { type: 'error', detail: event.detail }
+              break
+            }
+          } catch (e) {}
+        }
+        if (!result) result = { type: 'success', llm_response: fullContent }
+      } else {
+        result = typeof data === 'string' ? JSON.parse(data) : data
+      }
 
       if (result.type === 'error') {
         this._updateAiMsg(aiMsgId, [{ type: 'text', html: `<span style="color:#f44336;">${result.detail}</span>` }], true)
