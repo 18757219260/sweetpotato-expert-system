@@ -45,10 +45,18 @@ async def _generate_from_image(
         a,top_confidence = results[0]
         cv_text = format_classification_result(results)
 
-        if top_confidence < 0.50:
-            yield _sse({"type": "content", "content": f" 识别结果：\n{cv_text}\n\n"})
-            yield _sse({"type": "content", "content": "图片识别概率较低，建议上传更清晰的甘薯病害图片哦~ "})
-            yield _sse({"type": "done", "images": []})
+        if top_confidence < 0.85:
+            # 低置信度：调用 qwen-vl，不传 resnet 结果
+            from backend.services.vl_service import analyze_image_with_vl
+            vl_result = analyze_image_with_vl(image_path, description)
+            vl_desc = vl_result.get("description", "")
+            if description:
+                question = f"""图片分析结果：{vl_desc}\n\n用户补充描述：{description}\n\n请你作为甘薯种植专家，根据以上信息给出专业建议。"""
+            else:
+                question = f"""图片分析结果：{vl_desc}\n\n请你作为甘薯种植专家，根据以上信息给出专业建议。"""
+            from backend.api.chat import _generate
+            async for chunk in _generate(question, user_id, db, mode, session_id):
+                yield chunk
             return
 
         if description:
