@@ -10,7 +10,6 @@ build/
 .venv/
 venv/
 ENV/
-backend/static/images/
 .vscode/
 .idea/
 *.swp
